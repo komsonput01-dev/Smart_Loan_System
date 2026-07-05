@@ -2,13 +2,29 @@ import { SignIn } from '@clerk/nextjs';
 
 export default function SignInPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-zinc-950 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 flex flex-col items-center">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+    <div style={{
+      display: 'flex',
+      minHeight: '100vh',
+      width: '100%',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: '#f9fafb',
+      padding: '40px 16px',
+      boxSizing: 'border-box',
+    }}>
+      <div style={{
+        width: '100%',
+        maxWidth: '400px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '24px',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#111827', margin: 0 }}>
             🏦 Smart Loan System
           </h2>
-          <p className="mt-2 text-sm text-gray-600 dark:text-zinc-400">
+          <p style={{ fontSize: '14px', color: '#4b5563', marginTop: '8px', marginBottom: 0 }}>
             ระบบจัดการและติดตามหนี้อัจฉริยะ
           </p>
         </div>
