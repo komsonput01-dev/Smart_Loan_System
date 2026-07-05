@@ -12,6 +12,8 @@ import {
   DownOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import { useUser, useClerk } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 
 const { Header } = Layout;
 const { Text } = Typography;
@@ -22,31 +24,15 @@ interface AppHeaderProps {
   pageTitle?: string;
 }
 
-const userMenuItems: MenuProps['items'] = [
-  {
-    key: 'profile',
-    icon: <UserOutlined />,
-    label: 'โปรไฟล์ผู้ใช้',
-  },
-  {
-    key: 'settings',
-    icon: <SettingOutlined />,
-    label: 'ตั้งค่าบัญชี',
-  },
-  { type: 'divider' },
-  {
-    key: 'logout',
-    icon: <LogoutOutlined />,
-    label: 'ออกจากระบบ',
-    danger: true,
-  },
-];
-
 export default function AppHeader({
   sidebarCollapsed,
   onMobileMenuToggle,
   pageTitle = 'ภาพรวมระบบ',
 }: AppHeaderProps) {
+  const router = useRouter();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', {
     weekday: 'long',
@@ -54,6 +40,36 @@ export default function AppHeader({
     month: 'long',
     day: 'numeric',
   });
+
+  const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
+    if (key === 'logout') {
+      signOut(() => router.push('/'));
+    }
+  };
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: 'โปรไฟล์ผู้ใช้',
+    },
+    {
+      key: 'settings',
+      icon: <SettingOutlined />,
+      label: 'ตั้งค่าบัญชี',
+    },
+    { type: 'divider' },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'ออกจากระบบ',
+      danger: true,
+    },
+  ];
+
+  const fullName = user?.fullName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'ผู้ใช้งาน';
+  const roleLabel = user?.publicMetadata?.role === 'admin' || !user?.publicMetadata?.role ? 'ผู้ดูแลระบบ' : 'ลูกหนี้';
+  const initials = fullName.substring(0, 1).toUpperCase();
 
   return (
     <Header
@@ -169,20 +185,21 @@ export default function AppHeader({
 
         {/* User menu */}
         <Dropdown
-          menu={{ items: userMenuItems }}
+          menu={{ items: userMenuItems, onClick: handleMenuClick }}
           placement="bottomRight"
           trigger={['click']}
         >
           <div className="header-user-info" style={{ cursor: 'pointer' }}>
             <Avatar
               size={32}
+              src={user?.imageUrl}
               style={{
                 background: 'linear-gradient(135deg, var(--color-primary), var(--color-primary-medium))',
                 fontWeight: 700,
                 fontSize: 13,
               }}
             >
-              A
+              {initials}
             </Avatar>
             <div className="hidden-mobile" style={{ lineHeight: 1.3 }}>
               <div
@@ -192,7 +209,7 @@ export default function AppHeader({
                   color: 'var(--color-text-primary)',
                 }}
               >
-                Admin
+                {fullName}
               </div>
               <div
                 style={{
@@ -200,7 +217,7 @@ export default function AppHeader({
                   color: 'var(--color-text-muted)',
                 }}
               >
-                ผู้ดูแลระบบ
+                {roleLabel}
               </div>
             </div>
             <DownOutlined

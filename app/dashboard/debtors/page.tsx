@@ -13,7 +13,6 @@ import {
   Space,
   Tooltip,
   message,
-  Popconfirm,
   Empty,
   Spin,
   Badge,
@@ -29,7 +28,9 @@ import {
   EditOutlined,
   EyeOutlined,
   ReloadOutlined,
+  SaveOutlined,
 } from '@ant-design/icons';
+import { useUser } from '@clerk/nextjs';
 
 const { Text } = Typography;
 
@@ -64,11 +65,16 @@ const avatarColors = [
 ];
 
 export default function DebtorsPage() {
+  const { user: clerkUser } = useUser();
+  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+
   const [debtors, setDebtors] = useState<DebtorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingDebtor, setEditingDebtor] = useState<DebtorRow | null>(null);
+  
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -90,20 +96,31 @@ export default function DebtorsPage() {
     fetchDebtors();
   }, [fetchDebtors]);
 
-  const handleAddDebtor = async (values: Record<string, string>) => {
+  const handleFormSubmit = async (values: Record<string, string>) => {
     setSaving(true);
     try {
-      const res = await fetch('/api/debtors', {
-        method: 'POST',
+      const url = editingDebtor ? `/api/debtors/${editingDebtor.id}` : '/api/debtors';
+      const method = editingDebtor ? 'PATCH' : 'POST';
+      
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       });
+
       const data = await res.json();
       if (!res.ok) {
         throw new Error(data.error ?? 'บันทึกไม่สำเร็จ');
       }
-      messageApi.success(`เพิ่มลูกหนี้ "${values.fullName}" เรียบร้อยแล้ว`);
+
+      if (editingDebtor) {
+        messageApi.success(`แก้ไขข้อมูลลูกหนี้ "${values.fullName}" เรียบร้อยแล้ว`);
+      } else {
+        messageApi.success(`เพิ่มลูกหนี้ "${values.fullName}" เรียบร้อยแล้ว`);
+      }
+
       form.resetFields();
+      setEditingDebtor(null);
       setDrawerOpen(false);
       fetchDebtors();
     } catch (err: unknown) {
@@ -111,6 +128,17 @@ export default function DebtorsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleEditClick = (debtor: DebtorRow) => {
+    setEditingDebtor(debtor);
+    form.setFieldsValue({
+      fullName: debtor.fullName,
+      email: debtor.email || '',
+      phone: debtor.phone || '',
+      lineUserId: debtor.lineUserId || '',
+    });
+    setDrawerOpen(true);
   };
 
   const filtered = debtors.filter((d) => {
@@ -238,18 +266,30 @@ export default function DebtorsPage() {
               icon={<EyeOutlined />}
               size="small"
               style={{ color: 'var(--color-primary)' }}
-              onClick={() => messageApi.info(`ดูรายละเอียด: ${r.fullName}`)}
+              onClick={() => messageApi.info(`ดูรายละเอียดลูกหนี้: ${r.fullName}`)}
             />
           </Tooltip>
-          <Tooltip title="แก้ไขข้อมูล">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              size="small"
-              style={{ color: 'var(--color-text-secondary)' }}
-              onClick={() => messageApi.info(`แก้ไขข้อมูล: ${r.fullName}`)}
-            />
-          </Tooltip>
+          {isAdmin ? (
+            <Tooltip title="แก้ไขข้อมูล">
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                size="small"
+                style={{ color: 'var(--color-text-secondary)' }}
+                onClick={() => handleEditClick(r)}
+              />
+            </Tooltip>
+          ) : (
+            <Tooltip title="ไม่มีสิทธิ์แก้ไข (เฉพาะผู้ดูแลระบบ)">
+              <Button
+                type="text"
+                icon={<EditOutlined />}
+                size="small"
+                style={{ color: '#d1d5db' }}
+                disabled
+              />
+            </Tooltip>
+          )}
         </Space>
       ),
     },
@@ -263,32 +303,38 @@ export default function DebtorsPage() {
       <div className="page-header">
         <div>
           <h1 className="page-header-title">จัดการลูกหนี้</h1>
-          <p className="page-header-subtitle">เพิ่ม แก้ไข และดูข้อมูลลูกหนี้ทั้งหมด</p>
+          <p className="page-header-subtitle">เพิ่ม แก้ไข และดูข้อมูลลูกหนี้ทั้งหมดในระบบ</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <Tooltip title="รีเฟรชข้อมูล">
             <Button icon={<ReloadOutlined />} onClick={fetchDebtors} loading={loading} />
           </Tooltip>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setDrawerOpen(true)}
-            style={{ fontWeight: 600 }}
-          >
-            + เพิ่มลูกหนี้ใหม่
-          </Button>
+          {isAdmin && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingDebtor(null);
+                form.resetFields();
+                setDrawerOpen(true);
+              }}
+              style={{ borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+            >
+              + เพิ่มลูกหนี้ใหม่
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div style={{ marginBottom: 16, display: 'flex', gap: 8 }}>
+      {/* Filter and Search Bar */}
+      <div style={{ marginBottom: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <Input
           prefix={<SearchOutlined style={{ color: 'var(--color-text-muted)' }} />}
           placeholder="ค้นหาชื่อ, อีเมล, หรือเบอร์โทร..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           allowClear
-          style={{ maxWidth: 380, borderRadius: 'var(--radius-md)' }}
+          style={{ maxWidth: 320, borderRadius: 'var(--radius-md)' }}
         />
         <Text style={{ lineHeight: '38px', color: 'var(--color-text-muted)', fontSize: 13 }}>
           แสดง {filtered.length} จาก {debtors.length} รายการ
@@ -321,8 +367,12 @@ export default function DebtorsPage() {
                   </span>
                 }
               >
-                {!search && (
-                  <Button type="primary" icon={<PlusOutlined />} onClick={() => setDrawerOpen(true)}>
+                {!search && isAdmin && (
+                  <Button type="primary" icon={<PlusOutlined />} onClick={() => {
+                    setEditingDebtor(null);
+                    form.resetFields();
+                    setDrawerOpen(true);
+                  }}>
                     เพิ่มลูกหนี้แรก
                   </Button>
                 )}
@@ -335,29 +385,31 @@ export default function DebtorsPage() {
         />
       </div>
 
-      {/* Add Debtor Drawer */}
+      {/* Add/Edit Debtor Drawer */}
       <Drawer
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <Avatar icon={<UserOutlined />} style={{ background: 'var(--color-primary)' }} />
-            <span style={{ fontWeight: 700 }}>เพิ่มลูกหนี้ใหม่</span>
+            <Avatar icon={editingDebtor ? <EditOutlined /> : <UserOutlined />} style={{ background: 'var(--color-primary)' }} />
+            <span style={{ fontWeight: 700 }}>
+              {editingDebtor ? 'แก้ไขข้อมูลลูกหนี้' : 'เพิ่มลูกหนี้ใหม่'}
+            </span>
           </div>
         }
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); form.resetFields(); }}
+        onClose={() => { setDrawerOpen(false); form.resetFields(); setEditingDebtor(null); }}
         width={480}
         footer={
           <div style={{ textAlign: 'right', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button onClick={() => { setDrawerOpen(false); form.resetFields(); }}>
+            <Button onClick={() => { setDrawerOpen(false); form.resetFields(); setEditingDebtor(null); }}>
               ยกเลิก
             </Button>
             <Button
               type="primary"
               loading={saving}
-              icon={<PlusOutlined />}
+              icon={editingDebtor ? <SaveOutlined /> : <PlusOutlined />}
               onClick={() => form.submit()}
             >
-              บันทึกลูกหนี้
+              {editingDebtor ? 'บันทึกการแก้ไข' : 'บันทึกลูกหนี้'}
             </Button>
           </div>
         }
@@ -365,7 +417,7 @@ export default function DebtorsPage() {
         <Form
           form={form}
           layout="vertical"
-          onFinish={handleAddDebtor}
+          onFinish={handleFormSubmit}
           requiredMark={false}
         >
           <Form.Item
@@ -436,7 +488,7 @@ export default function DebtorsPage() {
               color: '#1e40af',
             }}
           >
-            💡 <strong>หมายเหตุ:</strong> ลูกหนี้จะถูกบันทึกในระบบทันที สามารถเพิ่มสัญญาเงินกู้ได้ในภายหลัง
+            💡 <strong>หมายเหตุ:</strong> ข้อมูลนี้ได้รับการปกป้องตามสิทธิ์และข้อกำหนดของระบบแอดมิน
           </div>
         </Form>
       </Drawer>

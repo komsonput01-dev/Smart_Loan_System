@@ -44,13 +44,9 @@ export async function ensureUser(): Promise<User | null> {
     primaryEmail?.split('@')[0] ||
     'Admin';
 
-  // 3. Determine role — first user in system becomes admin (bootstrap)
-  const [{ count }] = await db
-    .select({ count: sql<number>`COUNT(*)` })
-    .from(users)
-    .where(eq(users.role, 'admin'));
-
-  const role: 'admin' | 'debtor' = Number(count) === 0 ? 'admin' : 'debtor';
+  // 3. Determine role — check Clerk's publicMetadata.role. If not set, default to 'admin'.
+  const roleFromClerk = clerkUser.publicMetadata?.role as 'admin' | 'debtor' | undefined;
+  const role: 'admin' | 'debtor' = roleFromClerk ?? 'admin';
 
   // 4. Upsert (safe against race conditions)
   const [created] = await db

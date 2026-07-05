@@ -135,7 +135,7 @@ function getFullName(data: ClerkWebhookUserData): string {
 async function handleUserCreated(data: ClerkWebhookUserData) {
   const email = getPrimaryEmail(data);
   const fullName = getFullName(data);
-  const role = data.public_metadata?.role ?? 'debtor';
+  const role = data.public_metadata?.role ?? 'admin';
 
   console.log(`[Clerk Webhook] Creating user: ${data.id} (${email})`);
 
@@ -156,7 +156,7 @@ async function handleUserCreated(data: ClerkWebhookUserData) {
 async function handleUserUpdated(data: ClerkWebhookUserData) {
   const email = getPrimaryEmail(data);
   const fullName = getFullName(data);
-  const role = data.public_metadata?.role ?? 'debtor';
+  const role = data.public_metadata?.role ?? 'admin';
 
   console.log(`[Clerk Webhook] Updating user: ${data.id}`);
 
