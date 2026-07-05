@@ -163,13 +163,22 @@ export async function POST(req: Request, { params }: RouteParams) {
         })
         .where(eq(lineNotifications.id, lineNotification.id));
 
-      // Write into audit logs
-      await db.insert(notificationLogs).values({
-        loanId: loan.id,
-        notificationType,
-        sentDate: todayStr,
-        success: true,
-      });
+      // Write into audit logs (upsert to handle idempotency safely)
+      await db
+        .insert(notificationLogs)
+        .values({
+          loanId: loan.id,
+          notificationType,
+          sentDate: todayStr,
+          success: true,
+        })
+        .onConflictDoUpdate({
+          target: [notificationLogs.loanId, notificationLogs.sentDate, notificationLogs.notificationType],
+          set: {
+            success: true,
+            sentAt: new Date(),
+          },
+        });
 
       return NextResponse.json({ success: true, message: 'ส่งแจ้งเตือนทาง LINE สำเร็จแล้ว' });
     } else {
@@ -183,14 +192,24 @@ export async function POST(req: Request, { params }: RouteParams) {
         })
         .where(eq(lineNotifications.id, lineNotification.id));
 
-      // Write into audit logs
-      await db.insert(notificationLogs).values({
-        loanId: loan.id,
-        notificationType,
-        sentDate: todayStr,
-        success: false,
-        errorMessage: pushResult.error,
-      });
+      // Write into audit logs (upsert to handle idempotency safely)
+      await db
+        .insert(notificationLogs)
+        .values({
+          loanId: loan.id,
+          notificationType,
+          sentDate: todayStr,
+          success: false,
+          errorMessage: pushResult.error,
+        })
+        .onConflictDoUpdate({
+          target: [notificationLogs.loanId, notificationLogs.sentDate, notificationLogs.notificationType],
+          set: {
+            success: false,
+            errorMessage: pushResult.error,
+            sentAt: new Date(),
+          },
+        });
 
       return NextResponse.json(
         { error: `การส่งข้อความผ่าน LINE ล้มเหลว: ${pushResult.error}` },
