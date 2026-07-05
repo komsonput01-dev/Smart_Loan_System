@@ -7,11 +7,11 @@
 
 /* ─── CSS Custom Properties (Design Tokens) ─── */
 :root {
-  /* Brand Colors */
-  --color-primary: #1a56db;
-  --color-primary-hover: #1648c0;
-  --color-primary-light: #e8f0fe;
-  --color-primary-medium: #4f81e8;
+  /* Brand Colors (Deep Midnight Navy Theme) */
+  --color-primary: #0f172a;
+  --color-primary-hover: #1e293b;
+  --color-primary-light: #f1f5f9;
+  --color-primary-medium: #475569;
 
   /* Background */
   --color-bg-base: #f5f7fa;
@@ -108,8 +108,28 @@ body {
 
 /* ─── AntD Theme Overrides ─── */
 .ant-layout {
-  background: var(--color-bg-base) !important;
+  background-color: #f8fafc !important;
+  background-image: 
+    linear-gradient(rgba(15, 23, 42, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.015) 1px, transparent 1px) !important;
+  background-size: 32px 32px !important;
   min-height: 100vh;
+  position: relative;
+}
+
+.ant-layout::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='none' stroke='%230f172a' stroke-opacity='0.02' stroke-width='2' stroke-dasharray='8,8' d='M0,224L120,208C240,192,480,160,720,165.3C960,171,1200,213,1320,234.7L1440,256'/%3E%3Cpath fill='none' stroke='%2310b981' stroke-opacity='0.015' stroke-width='3' d='M0,288L120,261.3C240,235,480,181,720,176C960,171,1200,213,1320,234.7L1440,256'/%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat;
+  background-position: bottom right;
+  background-size: 800px auto;
 }
 
 .ant-layout-sider {
@@ -199,7 +219,57 @@ body {
 }
 
 .ant-table-tbody > tr:hover > td {
-  background: #fafbff !important;
+  background: rgba(241, 245, 249, 0.75) !important;
+}
+
+/* ─── Table Actions Interactive UI (UX Glow Effects) ─── */
+.ant-table-cell .ant-btn-text,
+.ant-space-item .ant-btn-text {
+  color: #9ca3af !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.ant-table-cell .ant-btn-text:hover,
+.ant-space-item .ant-btn-text:hover {
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+/* View hover -> Deep Navy */
+.ant-table-cell .ant-btn-text:has(.anticon-eye):hover,
+.ant-space-item .ant-btn-text:has(.anticon-eye):hover {
+  color: var(--color-primary) !important;
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Notify hover -> Premium Gold/Orange */
+.ant-table-cell .ant-btn-text:has(.anticon-bell):hover,
+.ant-space-item .ant-btn-text:has(.anticon-bell):hover {
+  color: #d97706 !important;
+  background-color: #fffbeb !important;
+}
+
+/* Pay / Accept hover -> Accent Emerald Mint */
+.ant-table-cell .ant-btn-text:has(.anticon-dollar-circle):hover,
+.ant-space-item .ant-btn-text:has(.anticon-dollar-circle):hover,
+.ant-table-cell .ant-btn-text:has(.anticon-check-circle):hover,
+.ant-space-item .ant-btn-text:has(.anticon-check-circle):hover {
+  color: var(--color-success) !important;
+  background-color: var(--color-success-bg) !important;
+}
+
+/* Edit hover -> Indigo */
+.ant-table-cell .ant-btn-text:has(.anticon-edit):hover,
+.ant-space-item .ant-btn-text:has(.anticon-edit):hover {
+  color: #4f46e5 !important;
+  background-color: #f5f3ff !important;
+}
+
+/* Delete hover -> Danger Red */
+.ant-table-cell .ant-btn-text.ant-btn-dangerous:hover,
+.ant-table-cell .ant-btn-text:has(.anticon-delete):hover,
+.ant-space-item .ant-btn-text:has(.anticon-delete):hover {
+  color: var(--color-danger) !important;
+  background-color: var(--color-danger-bg) !important;
 }
 
 .ant-tag {
@@ -362,6 +432,8 @@ body {
   padding-top: calc(var(--header-height) + var(--space-6));
   max-width: 1440px;
   margin: 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 /* ─── KPI Cards ─── */
@@ -374,16 +446,19 @@ body {
 
 .kpi-card {
   border-radius: var(--radius-lg) !important;
-  border: 1px solid var(--color-border) !important;
-  background: var(--color-bg-white) !important;
-  box-shadow: var(--shadow-card) !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  background: rgba(255, 255, 255, 0.75) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.02) !important;
   overflow: hidden;
   position: relative;
-  transition: box-shadow var(--transition-base), transform var(--transition-base) !important;
+  transition: box-shadow var(--transition-base), transform var(--transition-base), border-color var(--transition-base) !important;
 }
 
 .kpi-card:hover {
-  box-shadow: var(--shadow-lg) !important;
+  box-shadow: 0 12px 35px rgba(15, 23, 42, 0.04) !important;
+  border-color: rgba(15, 23, 42, 0.15) !important;
   transform: translateY(-2px);
 }
 
