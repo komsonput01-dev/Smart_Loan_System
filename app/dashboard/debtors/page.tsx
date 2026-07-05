@@ -551,7 +551,6 @@ export default function DebtorsPage() {
             label="ที่อยู่ปัจจุบัน"
           >
             <Input.TextArea
-              prefix={<EnvironmentOutlined style={{ color: 'var(--color-text-muted)' }} />}
               placeholder="กรอกรายละเอียดที่อยู่..."
               rows={2}
             />
@@ -574,7 +573,6 @@ export default function DebtorsPage() {
             label="หมายเหตุ / เงื่อนไขเพิ่มเติม"
           >
             <Input.TextArea
-              prefix={<FileTextOutlined style={{ color: 'var(--color-text-muted)' }} />}
               placeholder="เช่น ประวัติเครดิตบูโร, ข้อมูลผู้ค้ำประกัน..."
               rows={2}
             />
