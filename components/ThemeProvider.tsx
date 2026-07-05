@@ -12,9 +12,9 @@ dayjs.locale('th');
 const smartLoanTheme = {
   token: {
     // Brand
-    colorPrimary: '#1a56db',
-    colorPrimaryHover: '#1648c0',
-    colorPrimaryActive: '#1340aa',
+    colorPrimary: '#0f172a',
+    colorPrimaryHover: '#1e293b',
+    colorPrimaryActive: '#020617',
 
     // Typography
     fontFamily:
@@ -25,20 +25,20 @@ const smartLoanTheme = {
     borderRadius: 10,
     borderRadiusLG: 14,
     borderRadiusSM: 6,
-    colorBorder: '#e5e7eb',
-    colorBorderSecondary: '#f3f4f6',
+    colorBorder: '#e2e8f0',
+    colorBorderSecondary: '#f1f5f9',
 
     // Background
     colorBgBase: '#ffffff',
     colorBgContainer: '#ffffff',
-    colorBgLayout: '#f5f7fa',
+    colorBgLayout: '#f8fafc',
     colorBgElevated: '#ffffff',
 
     // Text
-    colorText: '#111827',
-    colorTextSecondary: '#6b7280',
-    colorTextTertiary: '#9ca3af',
-    colorTextPlaceholder: '#9ca3af',
+    colorText: '#0f172a',
+    colorTextSecondary: '#475569',
+    colorTextTertiary: '#94a3b8',
+    colorTextPlaceholder: '#94a3b8',
 
     // Status
     colorSuccess: '#10b981',
@@ -73,20 +73,20 @@ const smartLoanTheme = {
       controlHeight: 38,
     },
     Table: {
-      headerBg: '#f9fafb',
-      headerColor: '#6b7280',
-      headerSortActiveBg: '#f3f4f6',
-      rowHoverBg: '#fafbff',
-      borderColor: '#f3f4f6',
+      headerBg: '#f8fafc',
+      headerColor: '#475569',
+      headerSortActiveBg: '#f1f5f9',
+      rowHoverBg: 'rgba(241, 245, 249, 0.75)',
+      borderColor: '#f1f5f9',
     },
     Card: {
       borderRadius: 14,
     },
     Menu: {
       itemBorderRadius: 10,
-      itemSelectedBg: '#e8f0fe',
-      itemSelectedColor: '#1a56db',
-      itemHoverBg: '#f0f4ff',
+      itemSelectedBg: '#f1f5f9',
+      itemSelectedColor: '#0f172a',
+      itemHoverBg: '#f8fafc',
     },
     Tag: {
       borderRadius: 9999,
@@ -104,7 +104,7 @@ const smartLoanTheme = {
       borderRadius: 16,
     },
     Form: {
-      labelColor: '#374151',
+      labelColor: '#334155',
       labelFontSize: 13,
     },
     Statistic: {
@@ -114,7 +114,7 @@ const smartLoanTheme = {
     Layout: {
       siderBg: '#ffffff',
       headerBg: '#ffffff',
-      bodyBg: '#f5f7fa',
+      bodyBg: '#f8fafc',
     },
   },
 };
