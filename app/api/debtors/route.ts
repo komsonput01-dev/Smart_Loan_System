@@ -2,33 +2,39 @@
  * Debtors API — User management
  *
  * GET  /api/debtors       → list all debtors with their loan summary
- * POST /api/debtors       → create new debtor user record
+ * POST /api/debtors       → create new debtor user record (admin only)
  * GET  /api/debtors/[id]  → get debtor profile + all loans
+ *
+ * Auto-sync: uses ensureUser() so webhook misses on localhost don't break auth.
  */
 
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, loans } from '@/lib/db/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { ensureUser } from '@/lib/db/ensureUser';
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 const CreateDebtorSchema = z.object({
-  clerkUserId: z.string().min(1),
-  fullName: z.string().min(1, 'Name is required'),
-  email: z.string().email().optional(),
+  // clerkUserId is optional for debtors — we auto-generate a unique key if omitted
+  clerkUserId: z.string().min(1).optional(),
+  fullName: z.string().min(1, 'กรุณาระบุชื่อ-นามสกุล'),
+  email: z.string().email('รูปแบบอีเมลไม่ถูกต้อง').optional().or(z.literal('')),
   phone: z.string().optional(),
   lineUserId: z.string().optional(),
+  address: z.string().optional(),
+  idCardNumber: z.string().optional(),
 });
 
 // ─── GET /api/debtors ─────────────────────────────────────────────────────────
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    // ensureUser syncs the Clerk session into our DB (handles webhook-miss on localhost)
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -68,19 +74,14 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    // ensureUser syncs the current Clerk user into DB and auto-promotes first user to admin
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Admin only
-    const admin = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.clerkUserId, clerkUserId))
-      .limit(1);
-
-    if (!admin[0] || admin[0].role !== 'admin') {
+    if (currentUser.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -94,10 +95,17 @@ export async function POST(req: Request) {
       );
     }
 
+    // Auto-generate a unique internal ID for debtors who don't have Clerk accounts
+    const autoClerkId = parsed.data.clerkUserId ?? `debtor_${crypto.randomUUID()}`;
+
     const [newDebtor] = await db
       .insert(users)
       .values({
-        ...parsed.data,
+        clerkUserId: autoClerkId,
+        fullName: parsed.data.fullName,
+        email: parsed.data.email || null,
+        phone: parsed.data.phone || null,
+        lineUserId: parsed.data.lineUserId || null,
         role: 'debtor',
         isActive: true,
       })
@@ -105,9 +113,9 @@ export async function POST(req: Request) {
         target: users.clerkUserId,
         set: {
           fullName: parsed.data.fullName,
-          email: parsed.data.email,
-          phone: parsed.data.phone,
-          lineUserId: parsed.data.lineUserId,
+          email: parsed.data.email || null,
+          phone: parsed.data.phone || null,
+          lineUserId: parsed.data.lineUserId || null,
           updatedAt: new Date(),
         },
       })

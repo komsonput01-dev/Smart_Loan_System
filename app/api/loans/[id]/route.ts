@@ -4,11 +4,11 @@
  * PATCH /api/loans/[id] → update loan status/notes
  */
 
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { loans, users, payments, documents } from '@/lib/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
+import { ensureUser } from '@/lib/db/ensureUser';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -16,8 +16,8 @@ interface RouteParams {
 
 export async function GET(req: Request, { params }: RouteParams) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -71,19 +71,13 @@ export async function GET(req: Request, { params }: RouteParams) {
 
 export async function PATCH(req: Request, { params }: RouteParams) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Admin only
-    const adminUser = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.clerkUserId, clerkUserId))
-      .limit(1);
-
-    if (!adminUser[0] || adminUser[0].role !== 'admin') {
+    if (currentUser.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

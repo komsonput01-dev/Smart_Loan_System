@@ -12,7 +12,7 @@ import {
   PhoneOutlined,
 } from '@ant-design/icons';
 
-export type LoanStatus = 'active' | 'upcoming' | 'overdue';
+export type LoanStatus = 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl';
 
 export interface Debtor {
   id: string;
@@ -68,6 +68,18 @@ const statusConfig: Record<
     className: 'status-badge-overdue',
     dotClass: 'status-dot-overdue',
   },
+  closed: {
+    label: 'ปิดสัญญา',
+    icon: <CheckCircleFilled />,
+    className: 'status-badge-active',
+    dotClass: 'status-dot-active',
+  },
+  npl: {
+    label: 'หนี้เสีย',
+    icon: <WarningFilled />,
+    className: 'status-badge-overdue',
+    dotClass: 'status-dot-overdue',
+  },
 };
 
 const avatarColors = [
@@ -87,7 +99,7 @@ export default function DebtorCard({
   onNotify,
   onPayment,
 }: DebtorCardProps) {
-  const status = statusConfig[debtor.status];
+  const status = statusConfig[debtor.status] ?? statusConfig['active'];
   const color =
     debtor.avatarColor ??
     avatarColors[parseInt(debtor.id, 36) % avatarColors.length];

@@ -8,19 +8,19 @@
  * Financial calculations are performed using decimal.js to guarantee precision.
  */
 
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { loans, users, payments } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import Decimal from 'decimal.js';
+import { ensureUser } from '@/lib/db/ensureUser';
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
 
 export async function GET() {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -99,88 +99,40 @@ export async function GET() {
       .from(payments)
       .orderBy(payments.paymentDate);
 
-    // Create a mapping of payments by loan ID
-    const paymentsMap: Record<string, typeof allPayments> = {};
-    for (const payment of allPayments) {
-      if (!paymentsMap[payment.loanId]) {
-        paymentsMap[payment.loanId] = [];
-      }
-      paymentsMap[payment.loanId].push(payment);
-    }
-
-    // Flatten data for Pivot table analysis: one row per loan (with aggregated payment counts & last payment info)
-    const rawDataRows = rawData.map((loan) => {
-      const loanPayments = paymentsMap[loan.loanId] || [];
-      const paymentCount = loanPayments.length;
-      const lastPayment = loanPayments[loanPayments.length - 1];
+    // Join payments into raw rows for export
+    const rawRows = rawData.map((loanRow) => {
+      const loanPayments = allPayments.filter((p) => p.loanId === loanRow.loanId);
+      const totalAmountPaid = loanPayments.reduce(
+        (sum, p) => sum.plus(new Decimal(p.amountPaid)),
+        new Decimal('0')
+      );
 
       return {
-        'ID สัญญา': loan.loanId,
-        'ชื่อผู้กู้': loan.debtorName ?? 'ไม่ระบุ',
-        'เบอร์โทรศัพท์': loan.debtorPhone ?? 'ไม่ระบุ',
-        'อีเมล': loan.debtorEmail ?? 'ไม่ระบุ',
-        'LINE User ID': loan.debtorLineId ?? 'ไม่ระบุ',
-        'วงเงินต้นสัญญา (บาท)': new Decimal(loan.principal).toNumber(),
-        'เงินต้นคงเหลือ (บาท)': new Decimal(loan.outstandingPrincipal).toNumber(),
-        'ดอกเบี้ยค้างสะสม (บาท)': new Decimal(loan.accruedInterest).toNumber(),
-        'ดอกเบี้ยสะสมที่เก็บได้ (บาท)': new Decimal(loan.totalInterestCollected).toNumber(),
-        'อัตราดอกเบี้ย (%)': new Decimal(loan.interestRate).toNumber(),
-        'ประเภทดอกเบี้ย': formatInterestType(loan.interestType),
-        'สถานะสัญญา': formatStatus(loan.status),
-        'วันที่เริ่มสัญญา': loan.startDate,
-        'วันที่ครบกำหนด': loan.dueDate,
-        'คำนวณดอกเบี้ยล่าสุดเมื่อ': loan.lastInterestCalcDate ?? loan.startDate,
-        'จำนวนครั้งที่ชำระ': paymentCount,
-        'วันที่ชำระล่าสุด': lastPayment ? lastPayment.paymentDate : 'ยังไม่มีการชำระ',
-        'ยอดชำระล่าสุด (บาท)': lastPayment ? new Decimal(lastPayment.amountPaid).toNumber() : 0,
-        'หมายเหตุ': loan.note ?? '-',
+        'รหัสสัญญา': loanRow.note?.replace('รหัสสัญญา: ', '') || loanRow.loanId.substring(0, 8),
+        'ชื่อลูกหนี้': loanRow.debtorName || '—',
+        'เบอร์โทรศัพท์': loanRow.debtorPhone || '—',
+        'อีเมล': loanRow.debtorEmail || '—',
+        'LINE User ID': loanRow.debtorLineId || '—',
+        'เงินต้นเริ่มแรก': Number(loanRow.principal),
+        'เงินต้นคงเหลือ': Number(loanRow.outstandingPrincipal),
+        'ดอกเบี้ยค้างจ่ายสะสม': Number(loanRow.accruedInterest),
+        'รวมดอกเบี้ยที่เก็บได้': Number(loanRow.totalInterestCollected),
+        'ยอดชำระคืนรวม': totalAmountPaid.toNumber(),
+        'อัตราดอกเบี้ย (%)': Number(loanRow.interestRate),
+        'เงื่อนไขดอกเบี้ย': loanRow.interestType,
+        'สถานะสัญญา': loanRow.status,
+        'วันที่เริ่มสัญญา': loanRow.startDate,
+        'วันที่สิ้นสุดสัญญา': loanRow.dueDate,
+        'วันที่คิดดอกเบี้ยล่าสุด': loanRow.lastInterestCalcDate || '—',
       };
     });
 
     return NextResponse.json({
       summary: summaryData,
-      rawRows: rawDataRows,
+      rawRows,
     });
-
-  } catch (error: any) {
-    console.error('[Export API Error]', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
-  }
-}
-
-// ─── Helpers to translate codes to Thai for Excel report readability ──────────
-
-function formatInterestType(type: string): string {
-  switch (type) {
-    case 'flat_daily':
-      return 'คงที่รายวัน (Flat Daily)';
-    case 'flat_monthly':
-      return 'คงที่รายเดือน (Flat Monthly)';
-    case 'effective_daily':
-      return 'ลดต้นลดดอกรายวัน (Effective Daily)';
-    case 'effective_monthly':
-      return 'ลดต้นลดดอกรายเดือน (Effective Monthly)';
-    default:
-      return type;
-  }
-}
-
-function formatStatus(status: string): string {
-  switch (status) {
-    case 'active':
-      return 'ปกติ (Active)';
-    case 'upcoming':
-      return 'ใกล้ครบกำหนด (Upcoming)';
-    case 'overdue':
-      return 'เกินกำหนดชำระ (Overdue)';
-    case 'closed':
-      return 'ปิดสัญญาแล้ว (Closed)';
-    case 'npl':
-      return 'หนี้เสีย (NPL)';
-    default:
-      return status;
+  } catch (error) {
+    console.error('[GET /api/export]', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

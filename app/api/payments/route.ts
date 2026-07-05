@@ -2,7 +2,7 @@
  * Payments API — Record loan payments with smart allocation
  *
  * POST /api/payments → record a payment (allocate interest first, then principal)
- * GET  /api/payments?loanId=xxx → payment history for a loan
+ * GET  /api/payments[?loanId=xxx] → payment history for a loan or all payments
  *
  * Payment Allocation Logic (ตัดยอดอัจฉริยะ):
  * 1. Calculate accrued interest up to payment date
@@ -12,15 +12,15 @@
  * CRITICAL: All calculations use decimal.js to avoid floating-point errors
  */
 
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { loans, users, payments } from '@/lib/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 import Decimal from 'decimal.js';
 import { allocatePayment } from '@/lib/payment-allocator';
 import { calculateAccruedInterest } from '@/lib/interest-calculator';
+import { ensureUser } from '@/lib/db/ensureUser';
 
 // Configure Decimal.js for financial precision
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_HALF_UP });
@@ -38,25 +38,68 @@ const RecordPaymentSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const loanId = searchParams.get('loanId');
 
-    if (!loanId) {
-      return NextResponse.json({ error: 'loanId is required' }, { status: 400 });
+    if (loanId) {
+      // Fetch history for a specific loan
+      const paymentHistory = await db
+        .select({
+          id: payments.id,
+          loanId: payments.loanId,
+          paymentDate: payments.paymentDate,
+          amountPaid: payments.amountPaid,
+          interestPortion: payments.interestPortion,
+          principalPortion: payments.principalPortion,
+          remainingPrincipal: payments.remainingPrincipal,
+          accruedInterestBefore: payments.accruedInterestBefore,
+          accruedInterestAfter: payments.accruedInterestAfter,
+          note: payments.note,
+          recordedBy: payments.recordedBy,
+          createdAt: payments.createdAt,
+          // Join details
+          loanRef: loans.note,
+          debtorName: users.fullName,
+        })
+        .from(payments)
+        .leftJoin(loans, eq(payments.loanId, loans.id))
+        .leftJoin(users, eq(loans.userId, users.id))
+        .where(eq(payments.loanId, loanId))
+        .orderBy(desc(payments.paymentDate));
+
+      return NextResponse.json({ payments: paymentHistory });
+    } else {
+      // Fetch all payments in the system (for global list)
+      const paymentHistory = await db
+        .select({
+          id: payments.id,
+          loanId: payments.loanId,
+          paymentDate: payments.paymentDate,
+          amountPaid: payments.amountPaid,
+          interestPortion: payments.interestPortion,
+          principalPortion: payments.principalPortion,
+          remainingPrincipal: payments.remainingPrincipal,
+          accruedInterestBefore: payments.accruedInterestBefore,
+          accruedInterestAfter: payments.accruedInterestAfter,
+          note: payments.note,
+          recordedBy: payments.recordedBy,
+          createdAt: payments.createdAt,
+          // Join details
+          loanRef: loans.note,
+          debtorName: users.fullName,
+        })
+        .from(payments)
+        .leftJoin(loans, eq(payments.loanId, loans.id))
+        .leftJoin(users, eq(loans.userId, users.id))
+        .orderBy(desc(payments.paymentDate), desc(payments.createdAt));
+
+      return NextResponse.json({ payments: paymentHistory });
     }
-
-    const paymentHistory = await db
-      .select()
-      .from(payments)
-      .where(eq(payments.loanId, loanId))
-      .orderBy(desc(payments.paymentDate));
-
-    return NextResponse.json({ payments: paymentHistory });
   } catch (error) {
     console.error('[GET /api/payments]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
@@ -67,19 +110,13 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Verify admin role
-    const adminUser = await db
-      .select({ id: users.id, role: users.role })
-      .from(users)
-      .where(eq(users.clerkUserId, clerkUserId))
-      .limit(1);
-
-    if (!adminUser[0] || adminUser[0].role !== 'admin') {
+    if (currentUser.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 
@@ -148,9 +185,6 @@ export async function POST(req: Request) {
     }
 
     // ── Step 4: Persist in a transaction ──────────────────────────────────────
-    // Note: Neon HTTP doesn't support native transactions, simulate with sequential ops
-    // For production, use neon WebSocket driver for true transactions
-
     // Insert payment record
     const [newPayment] = await db.insert(payments).values({
       loanId,
@@ -162,7 +196,7 @@ export async function POST(req: Request) {
       accruedInterestBefore: totalAccrued.toFixed(2),
       accruedInterestAfter: allocation.remainingInterest.toFixed(2),
       note,
-      recordedBy: adminUser[0].id,
+      recordedBy: currentUser.id,
     }).returning();
 
     // Update loan state

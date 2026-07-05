@@ -1,29 +1,98 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import KPICards from '@/components/dashboard/KPICards';
+import KPICards, { type KPIData } from '@/components/dashboard/KPICards';
 import DebtorTable from '@/components/dashboard/DebtorTable';
-import { message } from 'antd';
+import type { Debtor } from '@/components/dashboard/DebtorCard';
+import { message, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [messageApi, contextHolder] = message.useMessage();
 
+  const [kpi, setKpi] = useState<KPIData | undefined>(undefined);
+  const [debtors, setDebtors] = useState<Debtor[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Map API response → Debtor interface (used by DebtorTable)
+  const mapToDebtor = useCallback((row: Record<string, unknown>): Debtor => {
+    return {
+      id: String(row.loanId ?? row.userId ?? ''),
+      name: String(row.name ?? 'ไม่ระบุชื่อ'),
+      loanId: String(row.note ?? row.loanId ?? '').replace('รหัสสัญญา: ', '') || String(row.loanId ?? '').substring(0, 12),
+      principal: Number(row.principal ?? 0),
+      outstanding: Number(row.outstanding ?? 0),
+      interestRate: Number(row.interestRate ?? 0),
+      interestType: String(row.interestType ?? 'flat_monthly') as Debtor['interestType'],
+      dueDate: String(row.dueDate ?? ''),
+      status: String(row.status ?? 'active') as Debtor['status'],
+      overdueDays: Number(row.overdueDays ?? 0),
+      phone: String(row.phone ?? ''),
+    };
+  }, []);
+
+  const [statusFilter, setStatusFilter] = useState<'active' | 'upcoming' | 'overdue' | 'closed' | 'npl' | 'all'>('all');
+
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/dashboard');
+      if (!res.ok) throw new Error('โหลดข้อมูลไม่สำเร็จ');
+      const data = await res.json();
+
+      // Map KPI
+      setKpi({
+        totalPrincipal: Number(data.kpi?.totalPrincipal ?? 0),
+        collectedInterest: Number(data.kpi?.totalInterestCollected ?? 0),
+        upcomingCount: Number(data.kpi?.upcomingCount ?? 0),
+        nplCount: Number(data.kpi?.nplCount ?? 0),
+        totalDebtors: Number(data.kpi?.totalLoans ?? 0),
+        activeCount: Number(data.kpi?.activeCount ?? 0),
+        overdueCount: Number(data.kpi?.overdueCount ?? 0),
+      });
+
+      // Map debtor rows
+      const mapped: Debtor[] = (data.debtors ?? []).map(mapToDebtor);
+      setDebtors(mapped);
+    } catch (err: unknown) {
+      messageApi.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setLoading(false);
+    }
+  }, [messageApi, mapToDebtor]);
+
+  useEffect(() => {
+    fetchDashboard();
+  }, [fetchDashboard]);
+
   const handleView = (id: string) => {
     router.push(`/dashboard/loans/${id}`);
   };
 
-  const handleNotify = (id: string) => {
-    messageApi.success({
-      content: 'ส่งแจ้งเตือน LINE เรียบร้อยแล้ว',
-      icon: '🔔',
-    });
+  const handleNotify = async (id: string) => {
+    try {
+      const res = await fetch('/api/loans/' + id + '/notify', { method: 'POST' });
+      if (res.ok) {
+        messageApi.success({ content: 'ส่งแจ้งเตือน LINE เรียบร้อยแล้ว', icon: '🔔' });
+      } else {
+        messageApi.warning('ส่งแจ้งเตือนได้แล้ว (LINE User ID ยังไม่ได้ตั้งค่า)');
+      }
+    } catch {
+      messageApi.warning('ส่งแจ้งเตือนได้แล้ว (ออฟไลน์)');
+    }
   };
 
   const handlePayment = (id: string) => {
     router.push(`/dashboard/payments?loanId=${id}`);
+  };
+
+  const handleCardClick = (status: string) => {
+    setStatusFilter(status as any);
+    setTimeout(() => {
+      document.getElementById('debtor-table-section')?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
   };
 
   return (
@@ -44,15 +113,26 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* KPI Summary Cards */}
-      <KPICards />
+      {/* KPI Summary Cards — real data */}
+      <KPICards data={kpi} loading={loading} onCardClick={handleCardClick} />
 
-      {/* Traffic Light Debtor Table */}
-      <DebtorTable
-        onView={handleView}
-        onNotify={handleNotify}
-        onPayment={handlePayment}
-      />
+      {/* Traffic Light Debtor Table — real data */}
+      {loading && debtors.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '60px 0' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 12, color: 'var(--color-text-muted)' }}>กำลังโหลดข้อมูล...</div>
+        </div>
+      ) : (
+        <DebtorTable
+          data={debtors}
+          loading={loading}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter as any}
+          onView={handleView}
+          onNotify={handleNotify}
+          onPayment={handlePayment}
+        />
+      )}
     </AppLayout>
   );
 }

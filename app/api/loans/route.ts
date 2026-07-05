@@ -10,12 +10,12 @@
  * Admin role required for write operations.
  */
 
-import { auth, currentUser } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { loans, users, payments } from '@/lib/db/schema';
-import { eq, desc, and, gte, lte, or, sql } from 'drizzle-orm';
+import { loans, users } from '@/lib/db/schema';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { ensureUser } from '@/lib/db/ensureUser';
 
 // ─── Validation Schemas ───────────────────────────────────────────────────────
 
@@ -36,14 +36,13 @@ const CreateLoanSchema = z.object({
 
 export async function GET(req: Request) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
-    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') ?? '1');
     const limit = parseInt(searchParams.get('limit') ?? '20');
     const offset = (page - 1) * limit;
@@ -120,19 +119,13 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
-    const { userId: clerkUserId } = await auth();
-    if (!clerkUserId) {
+    const currentUser = await ensureUser();
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Verify admin role
-    const adminUser = await db
-      .select({ role: users.role })
-      .from(users)
-      .where(eq(users.clerkUserId, clerkUserId))
-      .limit(1);
-
-    if (!adminUser[0] || adminUser[0].role !== 'admin') {
+    if (currentUser.role !== 'admin') {
       return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
 

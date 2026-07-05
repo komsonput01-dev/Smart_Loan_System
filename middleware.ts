@@ -18,6 +18,7 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks/(.*)',   // Clerk webhook — ไม่ต้อง auth (verify ด้วย svix signature แทน)
   '/api/cron/(.*)',       // Cron jobs — protect ด้วย CRON_SECRET header แทน
+  '/api/seed(.*)',        // Dev-only seed endpoint — protected by NODE_ENV check inside handler
 ]);
 
 export default clerkMiddleware(async (auth, req) => {

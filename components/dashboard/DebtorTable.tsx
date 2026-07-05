@@ -24,6 +24,8 @@ interface DebtorTableProps {
   onView?: (id: string) => void;
   onNotify?: (id: string) => void;
   onPayment?: (id: string) => void;
+  statusFilter?: LoanStatus | 'all';
+  onStatusFilterChange?: (status: LoanStatus | 'all') => void;
 }
 
 // ─── Mock Data ─────────────────────────────────────────────
@@ -174,6 +176,20 @@ const statusConfig: Record<
     bg: 'var(--color-danger-bg)',
     dot: 'status-dot-overdue',
   },
+  closed: {
+    label: 'ปิดสัญญา',
+    icon: <CheckCircleFilled style={{ fontSize: 12 }} />,
+    color: '#6b7280',
+    bg: '#f3f4f6',
+    dot: 'status-dot-active',
+  },
+  npl: {
+    label: 'หนี้เสีย (NPL)',
+    icon: <WarningFilled style={{ fontSize: 12 }} />,
+    color: '#7f1d1d',
+    bg: '#fef2f2',
+    dot: 'status-dot-overdue',
+  },
 };
 
 const avatarColors = [
@@ -187,14 +203,19 @@ const getInitials = (name: string) => {
 };
 
 export default function DebtorTable({
-  data = MOCK_DEBTORS,
+  data = [],
   loading = false,
   onView,
   onNotify,
   onPayment,
-}: DebtorTableProps) {
+  onAddLoan,
+  statusFilter: propStatusFilter,
+  onStatusFilterChange,
+}: DebtorTableProps & { onAddLoan?: () => void }) {
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<LoanStatus | 'all'>('all');
+  const [localStatusFilter, setLocalStatusFilter] = useState<LoanStatus | 'all'>('all');
+  const statusFilter = propStatusFilter !== undefined ? propStatusFilter : localStatusFilter;
+  const setStatusFilter = onStatusFilterChange !== undefined ? onStatusFilterChange : setLocalStatusFilter;
   const [messageApi, contextHolder] = message.useMessage();
   const [exportLoading, setExportLoading] = useState(false);
 
@@ -471,12 +492,14 @@ export default function DebtorTable({
       active: data.filter((d) => d.status === 'active').length,
       upcoming: data.filter((d) => d.status === 'upcoming').length,
       overdue: data.filter((d) => d.status === 'overdue').length,
+      closed: data.filter((d) => d.status === 'closed').length,
+      npl: data.filter((d) => d.status === 'npl').length,
     }),
     [data]
   );
 
   return (
-    <>
+    <div id="debtor-table-section">
       {contextHolder}
 
       {/* Section Header */}
@@ -508,6 +531,7 @@ export default function DebtorTable({
             type="primary"
             icon={<DollarCircleOutlined />}
             style={{ borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+            onClick={onAddLoan ?? (() => window.location.assign('/dashboard/loans/new'))}
           >
             <span className="hidden-mobile">+ เพิ่มสัญญาใหม่</span>
           </Button>
@@ -526,8 +550,8 @@ export default function DebtorTable({
         />
         <Select
           value={statusFilter}
-          onChange={setStatusFilter}
-          style={{ minWidth: 150 }}
+          onChange={(val) => setStatusFilter(val as any)}
+          style={{ minWidth: 170 }}
           options={[
             { value: 'all', label: `ทั้งหมด (${statusCounts.all})` },
             {
@@ -551,6 +575,22 @@ export default function DebtorTable({
               label: (
                 <span>
                   🔴 เกินกำหนด ({statusCounts.overdue})
+                </span>
+              ),
+            },
+            {
+              value: 'npl',
+              label: (
+                <span>
+                  ⚠️ หนี้เสีย NPL ({statusCounts.npl})
+                </span>
+              ),
+            },
+            {
+              value: 'closed',
+              label: (
+                <span>
+                  ⚫ ปิดสัญญา ({statusCounts.closed})
                 </span>
               ),
             },
@@ -606,6 +646,6 @@ export default function DebtorTable({
           ))
         )}
       </div>
-    </>
+    </div>
   );
 }

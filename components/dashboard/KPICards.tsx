@@ -24,23 +24,18 @@ export interface KPIData {
 interface KPICardsProps {
   data?: KPIData;
   loading?: boolean;
+  onCardClick?: (status: string) => void;
 }
 
 const formatCurrency = (value: number): string => {
-  if (value >= 1_000_000) {
-    return `฿${(value / 1_000_000).toFixed(2)}M`;
-  }
-  if (value >= 1_000) {
-    return `฿${(value / 1_000).toFixed(1)}K`;
-  }
-  return `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
 };
 
 const formatFullCurrency = (value: number): string => {
-  return `฿${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return `${value.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} บาท`;
 };
 
-export default function KPICards({ data, loading = false }: KPICardsProps) {
+export default function KPICards({ data, loading = false, onCardClick }: KPICardsProps) {
   const mockData: KPIData = data ?? {
     totalPrincipal: 4_850_000,
     collectedInterest: 186_240,
@@ -96,7 +91,7 @@ export default function KPICards({ data, loading = false }: KPICardsProps) {
       label: 'หนี้เสีย (NPL)',
       value: `${mockData.nplCount} ราย`,
       fullValue: `${mockData.nplCount} สัญญา เกินกำหนดชำระ`,
-      sub: `เกินกำหนด ${mockData.overdueCount} ราย รวม`,
+      sub: `เกินกำหนด ${mockData.overdueCount} ราย`,
       trend: '-1 ราย',
       trendUp: true,
       icon: <WarningOutlined />,
@@ -141,7 +136,19 @@ export default function KPICards({ data, loading = false }: KPICardsProps) {
     <div className="kpi-grid">
       {cards.map((card) => (
         <Tooltip key={card.key} title={card.fullValue} placement="top">
-          <div className="kpi-card" style={{ cursor: 'default' }}>
+          <div 
+            className="kpi-card" 
+            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            onClick={() => {
+              if (onCardClick) {
+                // If clicking upcoming, filter to 'upcoming'
+                // If clicking npl, filter to 'overdue' (since that contains the overdue debtors list)
+                // If clicking principal/interest, show 'all'
+                const filterVal = card.key === 'upcoming' ? 'upcoming' : card.key === 'npl' ? 'overdue' : 'all';
+                onCardClick(filterVal);
+              }
+            }}
+          >
             <div className="kpi-card-inner">
               {/* Icon */}
               <div
