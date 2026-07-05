@@ -61,6 +61,9 @@ export const users = pgTable(
     email: text('email'),
     phone: text('phone'),                    // เบอร์โทรศัพท์
     lineUserId: text('line_user_id'),        // LINE User ID สำหรับส่งแจ้งเตือน
+    address: text('address'),                // ที่อยู่
+    idCardNumber: text('id_card_number'),    // เลขบัตรประชาชน
+    note: text('note'),                      // หมายเหตุ / เงื่อนไขเพิ่มเติม
     role: userRoleEnum('role').notNull().default('debtor'),
     isActive: boolean('is_active').notNull().default(true),
     avatarUrl: text('avatar_url'),

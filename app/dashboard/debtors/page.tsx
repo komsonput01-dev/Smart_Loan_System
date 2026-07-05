@@ -17,6 +17,7 @@ import {
   Spin,
   Badge,
   Typography,
+  Popconfirm,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -29,6 +30,10 @@ import {
   EyeOutlined,
   ReloadOutlined,
   SaveOutlined,
+  DeleteOutlined,
+  EnvironmentOutlined,
+  IdcardOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useUser } from '@clerk/nextjs';
 
@@ -40,6 +45,9 @@ interface DebtorRow {
   email: string | null;
   phone: string | null;
   lineUserId: string | null;
+  address: string | null;
+  idCardNumber: string | null;
+  note: string | null;
   isActive: boolean;
   createdAt: string;
   totalLoans: number;
@@ -68,23 +76,6 @@ export default function DebtorsPage() {
   const { user: clerkUser } = useUser();
   const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
 
-  if (!isAdmin) {
-    return (
-      <AppLayout pageTitle="จัดการลูกหนี้">
-        <div style={{ textAlign: 'center', padding: '80px 16px' }}>
-          <Empty
-            image={<UserOutlined style={{ fontSize: 64, color: 'var(--color-danger)' }} />}
-            description={
-              <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 16 }}>
-                403 - ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะผู้ดูแลระบบเท่านั้น)
-              </span>
-            }
-          />
-        </div>
-      </AppLayout>
-    );
-  }
-
   const [debtors, setDebtors] = useState<DebtorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -112,6 +103,23 @@ export default function DebtorsPage() {
   useEffect(() => {
     fetchDebtors();
   }, [fetchDebtors]);
+
+  if (!isAdmin) {
+    return (
+      <AppLayout pageTitle="จัดการลูกหนี้">
+        <div style={{ textAlign: 'center', padding: '80px 16px' }}>
+          <Empty
+            image={<UserOutlined style={{ fontSize: 64, color: 'var(--color-danger)' }} />}
+            description={
+              <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 16 }}>
+                403 - ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะผู้ดูแลระบบเท่านั้น)
+              </span>
+            }
+          />
+        </div>
+      </AppLayout>
+    );
+  }
 
   const handleFormSubmit = async (values: Record<string, string>) => {
     setSaving(true);
@@ -154,8 +162,27 @@ export default function DebtorsPage() {
       email: debtor.email || '',
       phone: debtor.phone || '',
       lineUserId: debtor.lineUserId || '',
+      address: debtor.address || '',
+      idCardNumber: debtor.idCardNumber || '',
+      note: debtor.note || '',
     });
     setDrawerOpen(true);
+  };
+
+  const handleDeleteDebtor = async (id: string, name: string | null) => {
+    try {
+      const res = await fetch(`/api/debtors/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error ?? 'ลบลูกหนี้ไม่สำเร็จ');
+      }
+      messageApi.success(`ลบลูกหนี้ "${name || 'ไม่ระบุชื่อ'}" ออกจากระบบเรียบร้อยแล้ว`);
+      fetchDebtors();
+    } catch (err: unknown) {
+      messageApi.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาดในการลบข้อมูล');
+    }
   };
 
   const filtered = debtors.filter((d) => {
@@ -273,7 +300,7 @@ export default function DebtorsPage() {
     {
       title: 'การดำเนินการ',
       key: 'actions',
-      width: 120,
+      width: 150,
       fixed: 'right',
       render: (_, r) => (
         <Space size={4}>
@@ -287,15 +314,34 @@ export default function DebtorsPage() {
             />
           </Tooltip>
           {isAdmin ? (
-            <Tooltip title="แก้ไขข้อมูล">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                size="small"
-                style={{ color: 'var(--color-text-secondary)' }}
-                onClick={() => handleEditClick(r)}
-              />
-            </Tooltip>
+            <>
+              <Tooltip title="แก้ไขข้อมูล">
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  size="small"
+                  style={{ color: 'var(--color-text-secondary)' }}
+                  onClick={() => handleEditClick(r)}
+                />
+              </Tooltip>
+              <Tooltip title="ลบลูกหนี้">
+                <Popconfirm
+                  title="ลบลูกหนี้"
+                  description={`คุณต้องการลบลูกหนี้ "${r.fullName}" หรือไม่? (ประวัติสัญญาและประวัติชำระเงินจะยังคงอยู่ในระบบเพื่อความโปร่งใส แต่จะถูกซ่อนออกจากหน้านี้)`}
+                  okText="ลบ"
+                  cancelText="ยกเลิก"
+                  okButtonProps={{ danger: true }}
+                  onConfirm={() => handleDeleteDebtor(r.id, r.fullName)}
+                >
+                  <Button
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    size="small"
+                    danger
+                  />
+                </Popconfirm>
+              </Tooltip>
+            </>
           ) : (
             <Tooltip title="ไม่มีสิทธิ์แก้ไข (เฉพาะผู้ดูแลระบบ)">
               <Button
@@ -450,6 +496,23 @@ export default function DebtorsPage() {
           </Form.Item>
 
           <Form.Item
+            name="idCardNumber"
+            label="เลขประจำตัวประชาชน"
+            rules={[
+              {
+                pattern: /^[0-9]{13}$/,
+                message: 'รูปแบบเลขบัตรประชาชนไม่ถูกต้อง (ต้องเป็นตัวเลข 13 หลัก)',
+              },
+            ]}
+          >
+            <Input
+              prefix={<IdcardOutlined style={{ color: 'var(--color-text-muted)' }} />}
+              placeholder="กรอกตัวเลข 13 หลัก"
+              size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="phone"
             label="เบอร์โทรศัพท์"
             rules={[
@@ -484,6 +547,17 @@ export default function DebtorsPage() {
           </Form.Item>
 
           <Form.Item
+            name="address"
+            label="ที่อยู่ปัจจุบัน"
+          >
+            <Input.TextArea
+              prefix={<EnvironmentOutlined style={{ color: 'var(--color-text-muted)' }} />}
+              placeholder="กรอกรายละเอียดที่อยู่..."
+              rows={2}
+            />
+          </Form.Item>
+
+          <Form.Item
             name="lineUserId"
             label="LINE User ID (สำหรับส่งแจ้งเตือน)"
             extra="ใช้สำหรับส่ง LINE Notification อัตโนมัติ"
@@ -492,6 +566,17 @@ export default function DebtorsPage() {
               prefix={<span style={{ color: '#06c755', fontWeight: 700, fontSize: 13 }}>LINE</span>}
               placeholder="U1234567890abcdef..."
               size="large"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="note"
+            label="หมายเหตุ / เงื่อนไขเพิ่มเติม"
+          >
+            <Input.TextArea
+              prefix={<FileTextOutlined style={{ color: 'var(--color-text-muted)' }} />}
+              placeholder="เช่น ประวัติเครดิตบูโร, ข้อมูลผู้ค้ำประกัน..."
+              rows={2}
             />
           </Form.Item>
 
@@ -505,7 +590,7 @@ export default function DebtorsPage() {
               color: '#1e40af',
             }}
           >
-            💡 <strong>หมายเหตุ:</strong> ข้อมูลนี้ได้รับการปกป้องตามสิทธิ์และข้อกำหนดของระบบแอดมิน
+            💡 <strong>หมายเหตุ:</strong> ข้อมูลนี้ได้รับการปกป้องตามสิทธิ์และข้อกำหนดของระบบแอนมิน
           </div>
         </Form>
       </Drawer>

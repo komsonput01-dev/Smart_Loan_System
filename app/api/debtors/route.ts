@@ -1,9 +1,8 @@
 /**
  * Debtors API — User management
  *
- * GET  /api/debtors       → list all debtors with their loan summary
- * POST /api/debtors       → create new debtor user record (admin only)
- * GET  /api/debtors/[id]  → get debtor profile + all loans
+ * GET  /api/debtors       → list all debtors with their loan summary (Admin only)
+ * POST /api/debtors       → create new debtor user record (Admin only)
  *
  * Auto-sync: uses ensureUser() so webhook misses on localhost don't break auth.
  */
@@ -26,13 +25,13 @@ const CreateDebtorSchema = z.object({
   lineUserId: z.string().optional(),
   address: z.string().optional(),
   idCardNumber: z.string().optional(),
+  note: z.string().optional(),
 });
 
 // ─── GET /api/debtors ─────────────────────────────────────────────────────────
 
 export async function GET() {
   try {
-    // ensureUser syncs the Clerk session into our DB (handles webhook-miss on localhost)
     const currentUser = await ensureUser();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -51,6 +50,9 @@ export async function GET() {
         email: users.email,
         phone: users.phone,
         lineUserId: users.lineUserId,
+        address: users.address,
+        idCardNumber: users.idCardNumber,
+        note: users.note,
         avatarUrl: users.avatarUrl,
         isActive: users.isActive,
         createdAt: users.createdAt,
@@ -78,7 +80,6 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    // ensureUser syncs the current Clerk user into DB and auto-promotes first user to admin
     const currentUser = await ensureUser();
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -110,6 +111,9 @@ export async function POST(req: Request) {
         email: parsed.data.email || null,
         phone: parsed.data.phone || null,
         lineUserId: parsed.data.lineUserId || null,
+        address: parsed.data.address || null,
+        idCardNumber: parsed.data.idCardNumber || null,
+        note: parsed.data.note || null,
         role: 'debtor',
         isActive: true,
       })
@@ -120,6 +124,9 @@ export async function POST(req: Request) {
           email: parsed.data.email || null,
           phone: parsed.data.phone || null,
           lineUserId: parsed.data.lineUserId || null,
+          address: parsed.data.address || null,
+          idCardNumber: parsed.data.idCardNumber || null,
+          note: parsed.data.note || null,
           updatedAt: new Date(),
         },
       })
