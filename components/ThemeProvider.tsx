@@ -114,7 +114,7 @@ const smartLoanTheme = {
     Layout: {
       siderBg: '#ffffff',
       headerBg: '#ffffff',
-      bodyBg: '#f8fafc',
+      bodyBg: 'transparent',
     },
   },
 };

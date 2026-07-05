@@ -101,23 +101,18 @@ body {
   font-family: var(--font-family);
   font-size: var(--font-size-base);
   color: var(--color-text-primary);
-  background-color: var(--color-bg-base);
+  /* Financial grid background on body — visible through transparent layout wrappers */
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.018) 1px, transparent 1px);
+  background-size: 36px 36px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ─── AntD Theme Overrides ─── */
-.ant-layout {
-  background-color: #f8fafc !important;
-  background-image: 
-    linear-gradient(rgba(15, 23, 42, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.015) 1px, transparent 1px) !important;
-  background-size: 32px 32px !important;
-  min-height: 100vh;
-  position: relative;
-}
-
-.ant-layout::before {
+/* Financial growth curve watermark — fixed overlay on body */
+body::after {
   content: "";
   position: fixed;
   top: 0;
@@ -126,10 +121,21 @@ body {
   bottom: 0;
   pointer-events: none;
   z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='none' stroke='%230f172a' stroke-opacity='0.02' stroke-width='2' stroke-dasharray='8,8' d='M0,224L120,208C240,192,480,160,720,165.3C960,171,1200,213,1320,234.7L1440,256'/%3E%3Cpath fill='none' stroke='%2310b981' stroke-opacity='0.015' stroke-width='3' d='M0,288L120,261.3C240,235,480,181,720,176C960,171,1200,213,1320,234.7L1440,256'/%3E%3C/svg%3E") !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 400'%3E%3Cpath fill='none' stroke='%230f172a' stroke-opacity='0.025' stroke-width='2' stroke-dasharray='8,8' d='M0,280L120,260C240,240,480,200,720,205C960,210,1200,260,1320,280L1440,300'/%3E%3Cpath fill='none' stroke='%2310b981' stroke-opacity='0.02' stroke-width='3' d='M0,340L120,320C240,300,480,240,720,235C960,230,1200,270,1320,285L1440,300'/%3E%3Ccircle cx='1380' cy='290' r='180' fill='%2310b981' fill-opacity='0.012'/%3E%3Ccircle cx='60' cy='360' r='100' fill='%230f172a' fill-opacity='0.01'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: bottom right;
-  background-size: 800px auto;
+  background-size: 900px auto;
+}
+
+/* ─── AntD Theme Overrides ─── */
+/* Make ALL ant-layout wrappers transparent so body grid shows through */
+.ant-layout,
+.ant-layout-content {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  min-height: 100vh;
+  position: relative;
 }
 
 .ant-layout-sider {
