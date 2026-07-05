@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import DocumentUpload from '@/components/dashboard/DocumentUpload';
 import {
@@ -111,7 +111,7 @@ const statusConfig: Record<
   npl: { label: 'หนี้เสีย (NPL)', color: '#7f1d1d', badge: 'error' },
 };
 
-export default function LoanDetailPage({ params }: { params: React.Usable<{ id: string }> }) {
+function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> }) {
   const router = useRouter();
   const { id } = React.use(params);
 
@@ -654,5 +654,20 @@ export default function LoanDetailPage({ params }: { params: React.Usable<{ id: 
         </Form>
       </Modal>
     </AppLayout>
+  );
+}
+
+export default function LoanDetailPage({ params }: { params: React.Usable<{ id: string }> }) {
+  return (
+    <Suspense fallback={
+      <AppLayout pageTitle="สัญญาเงินกู้">
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 12, color: 'var(--color-text-muted)' }}>กำลังโหลดรายละเอียดสัญญาเงินกู้...</div>
+        </div>
+      </AppLayout>
+    }>
+      <LoanDetailContent params={params} />
+    </Suspense>
   );
 }

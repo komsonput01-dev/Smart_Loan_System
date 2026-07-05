@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import {
   Table,
@@ -62,7 +62,7 @@ interface LoanOption {
 const fmt = (v: string | number) =>
   `฿${Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function PaymentsPage() {
+function PaymentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedLoanId = searchParams.get('loanId');
@@ -416,5 +416,20 @@ export default function PaymentsPage() {
         </Form>
       </Drawer>
     </AppLayout>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense fallback={
+      <AppLayout pageTitle="บันทึกการชำระเงิน">
+        <div style={{ textAlign: 'center', padding: '100px 0' }}>
+          <Spin size="large" />
+          <div style={{ marginTop: 12, color: 'var(--color-text-muted)' }}>กำลังโหลด...</div>
+        </div>
+      </AppLayout>
+    }>
+      <PaymentsContent />
+    </Suspense>
   );
 }
