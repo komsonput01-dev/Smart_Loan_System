@@ -204,7 +204,7 @@ export async function POST(req: Request) {
     });
 
     // ── Step 3: Determine new loan status ─────────────────────────────────────
-    let newStatus: typeof loan.status = 'active';
+    let newStatus: 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl' = 'active';
     if (allocation.remainingPrincipal.isZero()) {
       newStatus = 'closed';
     } else {
