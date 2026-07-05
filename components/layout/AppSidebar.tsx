@@ -18,6 +18,7 @@ import {
 } from '@ant-design/icons';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useUser } from '@clerk/nextjs';
 
 const { Sider } = Layout;
 
@@ -28,42 +29,6 @@ interface AppSidebarProps {
   onMobileClose: () => void;
 }
 
-const menuItems: MenuProps['items'] = [
-  {
-    key: '/dashboard',
-    icon: <DashboardOutlined />,
-    label: <Link href="/dashboard">ภาพรวม</Link>,
-  },
-  {
-    key: '/dashboard/debtors',
-    icon: <TeamOutlined />,
-    label: <Link href="/dashboard/debtors">จัดการลูกหนี้</Link>,
-  },
-  {
-    key: '/dashboard/loans',
-    icon: <FileTextOutlined />,
-    label: <Link href="/dashboard/loans">สัญญาเงินกู้</Link>,
-  },
-  {
-    key: '/dashboard/payments',
-    icon: <DollarOutlined />,
-    label: <Link href="/dashboard/payments">บันทึกการชำระ</Link>,
-  },
-  {
-    type: 'divider' as const,
-  },
-  {
-    key: '/dashboard/export',
-    icon: <FileExcelOutlined />,
-    label: <Link href="/dashboard/export">ส่งออก Excel</Link>,
-  },
-  {
-    key: '/dashboard/settings',
-    icon: <SettingOutlined />,
-    label: <Link href="/dashboard/settings">ตั้งค่าระบบ</Link>,
-  },
-];
-
 export default function AppSidebar({
   collapsed,
   onCollapse,
@@ -72,6 +37,8 @@ export default function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role !== 'debtor';
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -80,7 +47,51 @@ export default function AppSidebar({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const selectedKey = menuItems
+  const items: MenuProps['items'] = [
+    {
+      key: '/dashboard',
+      icon: <DashboardOutlined />,
+      label: <Link href="/dashboard">{isAdmin ? 'ภาพรวม' : 'ภาพรวมสัญญาของฉัน'}</Link>,
+    },
+    ...(isAdmin ? [
+      {
+        key: '/dashboard/debtors',
+        icon: <TeamOutlined />,
+        label: <Link href="/dashboard/debtors">จัดการลูกหนี้</Link>,
+      },
+      {
+        key: '/dashboard/loans',
+        icon: <FileTextOutlined />,
+        label: <Link href="/dashboard/loans">สัญญาเงินกู้</Link>,
+      },
+      {
+        key: '/dashboard/payments',
+        icon: <DollarOutlined />,
+        label: <Link href="/dashboard/payments">บันทึกการชำระ</Link>,
+      },
+      {
+        type: 'divider' as const,
+      },
+      {
+        key: '/dashboard/export',
+        icon: <FileExcelOutlined />,
+        label: <Link href="/dashboard/export">ส่งออก Excel</Link>,
+      },
+      {
+        key: '/dashboard/settings',
+        icon: <SettingOutlined />,
+        label: <Link href="/dashboard/settings">ตั้งค่าระบบ</Link>,
+      },
+    ] : [
+      {
+        key: '/dashboard/payments',
+        icon: <DollarOutlined />,
+        label: <Link href="/dashboard/payments">ประวัติการชำระของฉัน</Link>,
+      },
+    ])
+  ];
+
+  const selectedKey = items
     ?.filter((item) => item && 'key' in item)
     .map((item) => (item as { key: string }).key)
     .find((key) => pathname === key || pathname.startsWith(key + '/')) ?? '/dashboard';
@@ -140,7 +151,7 @@ export default function AppSidebar({
           <Menu
             mode="inline"
             selectedKeys={[selectedKey]}
-            items={menuItems}
+            items={items}
             inlineCollapsed={!isMobile && collapsed}
             style={{
               border: 'none',

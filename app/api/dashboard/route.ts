@@ -2,14 +2,14 @@
  * Dashboard API — KPI summary + Debtor table data
  *
  * GET /api/dashboard  → returns { kpi, debtors }
- * - kpi: aggregate financial stats
- * - debtors: flat list of loans with debtor info (maps 1:1 to DebtorTable rows)
+ * - kpi: aggregate financial stats (filtered by user if role is debtor)
+ * - debtors: flat list of loans with debtor info (filtered by user if role is debtor)
  */
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { users, loans } from '@/lib/db/schema';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and } from 'drizzle-orm';
 import { ensureUser } from '@/lib/db/ensureUser';
 
 export async function GET() {
@@ -19,8 +19,10 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const isDebtor = currentUser.role === 'debtor';
+
     // ── 1. KPI aggregates ─────────────────────────────────────────────────────
-    const [kpi] = await db
+    const kpiQuery = db
       .select({
         totalPrincipal: sql<string>`COALESCE(SUM(${loans.principal}), '0')`,
         totalOutstanding: sql<string>`COALESCE(SUM(${loans.outstandingPrincipal}), '0')`,
@@ -34,8 +36,14 @@ export async function GET() {
       })
       .from(loans);
 
+    if (isDebtor) {
+      kpiQuery.where(eq(loans.userId, currentUser.id));
+    }
+
+    const [kpi] = await kpiQuery;
+
     // ── 2. Debtor rows (one row per loan, with user info) ─────────────────────
-    const debtors = await db
+    const debtorsQuery = db
       .select({
         // Loan identity
         loanId: loans.id,
@@ -58,8 +66,13 @@ export async function GET() {
         status: loans.status,
       })
       .from(loans)
-      .leftJoin(users, eq(loans.userId, users.id))
-      .orderBy(desc(loans.createdAt));
+      .leftJoin(users, eq(loans.userId, users.id));
+
+    if (isDebtor) {
+      debtorsQuery.where(eq(loans.userId, currentUser.id));
+    }
+
+    const debtors = await debtorsQuery.orderBy(desc(loans.createdAt));
 
     // ── 3. Compute overdue days client-side friendly ───────────────────────────
     const today = new Date();

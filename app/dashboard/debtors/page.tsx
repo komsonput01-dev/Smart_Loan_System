@@ -68,6 +68,23 @@ export default function DebtorsPage() {
   const { user: clerkUser } = useUser();
   const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
 
+  if (!isAdmin) {
+    return (
+      <AppLayout pageTitle="จัดการลูกหนี้">
+        <div style={{ textAlign: 'center', padding: '80px 16px' }}>
+          <Empty
+            image={<UserOutlined style={{ fontSize: 64, color: 'var(--color-danger)' }} />}
+            description={
+              <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 16 }}>
+                403 - ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะผู้ดูแลระบบเท่านั้น)
+              </span>
+            }
+          />
+        </div>
+      </AppLayout>
+    );
+  }
+
   const [debtors, setDebtors] = useState<DebtorRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');

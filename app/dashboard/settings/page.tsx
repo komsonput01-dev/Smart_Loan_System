@@ -19,6 +19,7 @@ import {
   Col,
   Avatar,
   Divider,
+  Empty,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -29,7 +30,9 @@ import {
   SaveOutlined,
   SendOutlined,
   SafetyCertificateOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
+import { useUser } from '@clerk/nextjs';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -49,6 +52,9 @@ const avatarColors = [
 ];
 
 export default function SettingsPage() {
+  const { user: clerkUser } = useUser();
+  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+
   const [activeTab, setActiveTab] = useState('bank');
   const [loading, setLoading] = useState(false);
   const [testingLine, setTestingLine] = useState(false);
@@ -92,6 +98,23 @@ export default function SettingsPage() {
       setTestingLine(false);
     }
   };
+
+  if (!isAdmin) {
+    return (
+      <AppLayout pageTitle="ตั้งค่าระบบ">
+        <div style={{ textAlign: 'center', padding: '80px 16px' }}>
+          <Empty
+            image={<UserOutlined style={{ fontSize: 64, color: 'var(--color-danger)' }} />}
+            description={
+              <span style={{ color: 'var(--color-danger)', fontWeight: 600, fontSize: 16 }}>
+                403 - ขออภัย คุณไม่มีสิทธิ์เข้าถึงหน้านี้ (เฉพาะผู้ดูแลระบบเท่านั้น)
+              </span>
+            }
+          />
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout pageTitle="ตั้งค่าระบบ">

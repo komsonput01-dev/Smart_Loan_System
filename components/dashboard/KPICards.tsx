@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { Card, Tooltip } from 'antd';
+import { useUser } from '@clerk/nextjs';
 import {
   BankOutlined,
   RiseOutlined,
@@ -36,6 +37,9 @@ const formatFullCurrency = (value: number): string => {
 };
 
 export default function KPICards({ data, loading = false, onCardClick }: KPICardsProps) {
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role !== 'debtor';
+
   const mockData: KPIData = data ?? {
     totalPrincipal: 4_850_000,
     collectedInterest: 186_240,
@@ -49,12 +53,14 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
   const cards = [
     {
       key: 'principal',
-      label: 'เงินต้นรวมทั้งหมด',
+      label: isAdmin ? 'เงินต้นรวมทั้งหมด' : 'ยอดเงินต้นคงเหลือของฉัน',
       value: formatCurrency(mockData.totalPrincipal),
       fullValue: formatFullCurrency(mockData.totalPrincipal),
-      sub: `${mockData.totalDebtors} สัญญา / ${mockData.activeCount} ใช้งาน`,
-      trend: '+12.5%',
-      trendUp: true,
+      sub: isAdmin
+        ? `${mockData.totalDebtors} สัญญา / ${mockData.activeCount} ใช้งาน`
+        : `${mockData.totalDebtors} สัญญาเงินกู้`,
+      trend: null,
+      trendUp: null,
       icon: <BankOutlined />,
       iconBg: '#e8f0fe',
       iconColor: 'var(--color-primary)',
@@ -62,12 +68,12 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
     },
     {
       key: 'interest',
-      label: 'ดอกเบี้ยที่เก็บได้แล้ว',
+      label: isAdmin ? 'ดอกเบี้ยที่เก็บได้แล้ว' : 'ดอกเบี้ยที่ชำระไปแล้ว',
       value: formatCurrency(mockData.collectedInterest),
       fullValue: formatFullCurrency(mockData.collectedInterest),
-      sub: 'เดือนนี้',
-      trend: '+8.2%',
-      trendUp: true,
+      sub: isAdmin ? 'ยอดรวมทั้งหมด' : 'ดอกเบี้ยรวม',
+      trend: null,
+      trendUp: null,
       icon: <RiseOutlined />,
       iconBg: '#ecfdf5',
       iconColor: 'var(--color-success)',
@@ -75,8 +81,8 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
     },
     {
       key: 'upcoming',
-      label: 'ใกล้ถึงกำหนดชำระ',
-      value: `${mockData.upcomingCount} ราย`,
+      label: isAdmin ? 'ใกล้ถึงกำหนดชำระ' : 'สัญญาใกล้ครบกำหนด',
+      value: `${mockData.upcomingCount} รายการ`,
       fullValue: `${mockData.upcomingCount} สัญญา ใน 1-3 วัน`,
       sub: 'ภายใน 1–3 วัน',
       trend: null,
@@ -88,12 +94,12 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
     },
     {
       key: 'npl',
-      label: 'หนี้เสีย (NPL)',
-      value: `${mockData.nplCount} ราย`,
+      label: isAdmin ? 'หนี้เสีย (NPL)' : 'หนี้เสีย NPL',
+      value: `${mockData.nplCount} รายการ`,
       fullValue: `${mockData.nplCount} สัญญา เกินกำหนดชำระ`,
-      sub: `เกินกำหนด ${mockData.overdueCount} ราย`,
-      trend: '-1 ราย',
-      trendUp: true,
+      sub: `เกินกำหนด ${mockData.overdueCount} รายการ`,
+      trend: null,
+      trendUp: null,
       icon: <WarningOutlined />,
       iconBg: '#fef2f2',
       iconColor: 'var(--color-danger)',

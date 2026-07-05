@@ -7,8 +7,12 @@ import DebtorTable from '@/components/dashboard/DebtorTable';
 import type { Debtor } from '@/components/dashboard/DebtorCard';
 import { message, Spin } from 'antd';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 
 export default function DashboardPage() {
+  const { user: clerkUser } = useUser();
+  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+
   const router = useRouter();
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -96,12 +100,14 @@ export default function DashboardPage() {
   };
 
   return (
-    <AppLayout pageTitle="ภาพรวมระบบ">
+    <AppLayout pageTitle={isAdmin ? 'ภาพรวมระบบ' : 'ภาพรวมสัญญาของฉัน'}>
       {contextHolder}
 
       {/* Page heading */}
       <div className="page-header">
-        <h1 className="page-header-title">ภาพรวมระบบสินเชื่อ</h1>
+        <h1 className="page-header-title">
+          {isAdmin ? 'ภาพรวมระบบสินเชื่อ' : 'ภาพรวมสัญญาเงินกู้ของฉัน'}
+        </h1>
         <p className="page-header-subtitle">
           ข้อมูล ณ วันที่{' '}
           {new Date().toLocaleDateString('th-TH', {

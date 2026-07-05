@@ -17,6 +17,7 @@ import {
 } from '@ant-design/icons';
 import type { Debtor, LoanStatus } from './DebtorCard';
 import DebtorCard from './DebtorCard';
+import { useUser } from '@clerk/nextjs';
 
 interface DebtorTableProps {
   data?: Debtor[];
@@ -218,6 +219,8 @@ export default function DebtorTable({
   const setStatusFilter = onStatusFilterChange !== undefined ? onStatusFilterChange : setLocalStatusFilter;
   const [messageApi, contextHolder] = message.useMessage();
   const [exportLoading, setExportLoading] = useState(false);
+  const { user: clerkUser } = useUser();
+  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
 
   const handleExportExcel = async () => {
     setExportLoading(true);
@@ -460,27 +463,31 @@ export default function DebtorTable({
               }}
             />
           </Tooltip>
-          <Tooltip title="แจ้งเตือน LINE">
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              size="small"
-              onClick={() => handleNotify(record.id)}
-              style={{
-                color: '#06c755',
-                borderRadius: 'var(--radius-md)',
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="บันทึกการชำระ">
-            <Button
-              type="primary"
-              icon={<DollarCircleOutlined />}
-              size="small"
-              onClick={() => onPayment?.(record.id)}
-              style={{ borderRadius: 'var(--radius-md)' }}
-            />
-          </Tooltip>
+          {isAdmin && (
+            <>
+              <Tooltip title="แจ้งเตือน LINE">
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  size="small"
+                  onClick={() => handleNotify(record.id)}
+                  style={{
+                    color: '#06c755',
+                    borderRadius: 'var(--radius-md)',
+                  }}
+                />
+              </Tooltip>
+              <Tooltip title="บันทึกการชำระ">
+                <Button
+                  type="primary"
+                  icon={<DollarCircleOutlined />}
+                  size="small"
+                  onClick={() => onPayment?.(record.id)}
+                  style={{ borderRadius: 'var(--radius-md)' }}
+                />
+              </Tooltip>
+            </>
+          )}
         </Space>
       ),
     },
@@ -505,37 +512,41 @@ export default function DebtorTable({
       {/* Section Header */}
       <div className="section-header">
         <div>
-          <h2 className="section-title">รายการลูกหนี้ทั้งหมด</h2>
+          <h2 className="section-title">
+            {isAdmin ? 'รายการลูกหนี้ทั้งหมด' : 'รายการสัญญาเงินกู้ของฉัน'}
+          </h2>
           <p className="section-subtitle">
             แสดง {filtered.length} จาก {data.length} รายการ
           </p>
         </div>
-        <div
-          style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}
-        >
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            loading={exportLoading}
-            onClick={handleExportExcel}
-            style={{ 
-              borderRadius: 'var(--radius-md)', 
-              fontWeight: 600,
-              backgroundColor: '#217346',
-              borderColor: '#217346'
-            }}
+        {isAdmin && (
+          <div
+            style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}
           >
-            <span className="hidden-mobile">ส่งออก Excel</span>
-          </Button>
-          <Button
-            type="primary"
-            icon={<DollarCircleOutlined />}
-            style={{ borderRadius: 'var(--radius-md)', fontWeight: 600 }}
-            onClick={onAddLoan ?? (() => window.location.assign('/dashboard/loans/new'))}
-          >
-            <span className="hidden-mobile">+ เพิ่มสัญญาใหม่</span>
-          </Button>
-        </div>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              loading={exportLoading}
+              onClick={handleExportExcel}
+              style={{ 
+                borderRadius: 'var(--radius-md)', 
+                fontWeight: 600,
+                backgroundColor: '#217346',
+                borderColor: '#217346'
+              }}
+            >
+              <span className="hidden-mobile">ส่งออก Excel</span>
+            </Button>
+            <Button
+              type="primary"
+              icon={<DollarCircleOutlined />}
+              style={{ borderRadius: 'var(--radius-md)', fontWeight: 600 }}
+              onClick={onAddLoan ?? (() => window.location.assign('/dashboard/loans/new'))}
+            >
+              <span className="hidden-mobile">+ เพิ่มสัญญาใหม่</span>
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Filter Bar */}
