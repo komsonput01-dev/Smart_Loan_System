@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1783165223589,
+      "tag": "0000_greedy_wildside",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1783166140589,
+      "tag": "0001_violet_stark_industries",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1783166685508,
+      "tag": "0002_unknown_rocket_raccoon",
+      "breakpoints": true
+    }
+  ]
+}
