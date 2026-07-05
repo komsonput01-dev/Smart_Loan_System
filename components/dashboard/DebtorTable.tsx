@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Table, Button, Input, Select, Tag, Tooltip, Avatar, Space, message } from 'antd';
+import { Table, Button, Input, Select, Tag, Tooltip, Avatar, Space, message, Switch } from 'antd';
 import * as XLSX from 'xlsx';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -219,6 +219,7 @@ export default function DebtorTable({
   const setStatusFilter = onStatusFilterChange !== undefined ? onStatusFilterChange : setLocalStatusFilter;
   const [messageApi, contextHolder] = message.useMessage();
   const [exportLoading, setExportLoading] = useState(false);
+  const [hideClosed, setHideClosed] = useState(false);
   const { user: clerkUser } = useUser();
   const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
 
@@ -293,13 +294,12 @@ export default function DebtorTable({
         d.name.toLowerCase().includes(search.toLowerCase()) ||
         d.loanId.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'all' || d.status === statusFilter;
-      return matchSearch && matchStatus;
+      const matchHideClosed = !hideClosed || d.status !== 'closed' || statusFilter === 'closed';
+      return matchSearch && matchStatus && matchHideClosed;
     });
-  }, [data, search, statusFilter]);
+  }, [data, search, statusFilter, hideClosed]);
 
   const handleNotify = (id: string) => {
-    const debtor = data.find((d) => d.id === id);
-    messageApi.success(`ส่งแจ้งเตือน LINE ให้ ${debtor?.name} แล้ว`);
     onNotify?.(id);
   };
 
@@ -550,14 +550,14 @@ export default function DebtorTable({
       </div>
 
       {/* Filter Bar */}
-      <div className="filter-bar">
+      <div className="filter-bar" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <Input
           prefix={<SearchOutlined style={{ color: 'var(--color-text-muted)' }} />}
           placeholder="ค้นหาชื่อหรือหมายเลขสัญญา..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           allowClear
-          style={{ borderRadius: 'var(--radius-md)' }}
+          style={{ borderRadius: 'var(--radius-md)', maxWidth: 260 }}
         />
         <Select
           value={statusFilter}
@@ -607,7 +607,19 @@ export default function DebtorTable({
             },
           ]}
         />
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+            ซ่อนสัญญาที่ปิดแล้ว
+          </span>
+          <Switch
+            checked={hideClosed}
+            onChange={setHideClosed}
+            checkedChildren="เปิด"
+            unCheckedChildren="ปิด"
+          />
+        </div>
       </div>
+
 
       {/* Desktop Table */}
       <div className="table-card hidden-mobile">

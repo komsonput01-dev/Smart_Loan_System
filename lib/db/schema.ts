@@ -152,6 +152,7 @@ export const payments = pgTable(
     // NUMERIC precision for all monetary fields
     amountPaid: numeric('amount_paid', { precision: 15, scale: 2 }).notNull(),
     interestPortion: numeric('interest_portion', { precision: 15, scale: 2 }).notNull(),    // ส่วนที่หักดอกเบี้ย
+    penaltyPortion: numeric('penalty_portion', { precision: 15, scale: 2 }).notNull().default('0'), // ส่วนที่หักดอกเบี้ยปรับ
     principalPortion: numeric('principal_portion', { precision: 15, scale: 2 }).notNull(),  // ส่วนที่หักเงินต้น
     remainingPrincipal: numeric('remaining_principal', { precision: 15, scale: 2 }).notNull(), // เงินต้นคงเหลือหลังชำระ
     accruedInterestBefore: numeric('accrued_interest_before', { precision: 15, scale: 2 }).notNull(), // ดอกเบี้ยค้างก่อนชำระ

@@ -76,15 +76,38 @@ export default function DashboardPage() {
   };
 
   const handleNotify = async (id: string) => {
+    const key = 'notify-loading';
+    messageApi.open({
+      key,
+      type: 'loading',
+      content: 'กำลังส่งการแจ้งเตือนทาง LINE...',
+      duration: 0,
+    });
     try {
-      const res = await fetch('/api/loans/' + id + '/notify', { method: 'POST' });
+      const res = await fetch(`/api/loans/${id}/notify`, { method: 'POST' });
+      const data = await res.json();
       if (res.ok) {
-        messageApi.success({ content: 'ส่งแจ้งเตือน LINE เรียบร้อยแล้ว', icon: '🔔' });
+        messageApi.open({
+          key,
+          type: 'success',
+          content: 'ส่งแจ้งเตือนทาง LINE เรียบร้อยแล้ว 🔔',
+          duration: 3,
+        });
       } else {
-        messageApi.warning('ส่งแจ้งเตือนได้แล้ว (LINE User ID ยังไม่ได้ตั้งค่า)');
+        messageApi.open({
+          key,
+          type: 'error',
+          content: data.error ?? 'ส่งแจ้งเตือนไม่สำเร็จ',
+          duration: 4,
+        });
       }
     } catch {
-      messageApi.warning('ส่งแจ้งเตือนได้แล้ว (ออฟไลน์)');
+      messageApi.open({
+        key,
+        type: 'error',
+        content: 'เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย',
+        duration: 3,
+      });
     }
   };
 

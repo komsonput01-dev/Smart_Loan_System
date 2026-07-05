@@ -140,7 +140,7 @@ export async function GET(req: Request) {
       if (alreadyEnqueued.length > 0) continue;
 
       // Calculate total accrued interest including today
-      const currentAccrued = calculateCurrentAccruedInterest({
+      const currentAccruedResult = calculateCurrentAccruedInterest({
         outstandingPrincipal: loan.outstandingPrincipal,
         originalPrincipal: loan.principal,
         interestRate: loan.interestRate,
@@ -148,7 +148,9 @@ export async function GET(req: Request) {
         lastInterestCalcDate: loan.lastInterestCalcDate,
         startDate: loan.startDate,
         existingAccruedInterest: loan.accruedInterest,
+        dueDate: loan.dueDate,
       });
+      const currentAccrued = currentAccruedResult.totalAccrued;
 
       const totalPayoff = new Decimal(loan.outstandingPrincipal).plus(currentAccrued);
 
@@ -226,7 +228,7 @@ export async function GET(req: Request) {
 
       if (alreadyEnqueued.length > 0) continue;
 
-      const currentAccrued = calculateCurrentAccruedInterest({
+      const currentAccruedResult = calculateCurrentAccruedInterest({
         outstandingPrincipal: loan.outstandingPrincipal,
         originalPrincipal: loan.principal,
         interestRate: loan.interestRate,
@@ -234,7 +236,9 @@ export async function GET(req: Request) {
         lastInterestCalcDate: loan.lastInterestCalcDate,
         startDate: loan.startDate,
         existingAccruedInterest: loan.accruedInterest,
+        dueDate: loan.dueDate,
       });
+      const currentAccrued = currentAccruedResult.totalAccrued;
 
       const totalPayoff = new Decimal(loan.outstandingPrincipal).plus(currentAccrued);
       const msPerDay = 1000 * 60 * 60 * 24;

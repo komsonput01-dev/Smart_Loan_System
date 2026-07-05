@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useMemo } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import DocumentUpload from '@/components/dashboard/DocumentUpload';
+import Decimal from 'decimal.js';
 import {
   Card,
   Descriptions,
@@ -24,7 +25,7 @@ import {
   InputNumber,
   Badge,
   Select,
-
+  Tabs,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -131,6 +132,123 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
 
   const searchParams = useSearchParams();
   const payParam = searchParams.get('pay');
+
+  const [simInstallment, setSimInstallment] = useState<number>(10000);
+
+  useEffect(() => {
+    if (loan) {
+      const suggested = Math.max(1000, Math.ceil(Number(loan.principal) * 0.10));
+      setSimInstallment(suggested);
+    }
+  }, [loan]);
+
+  const disabledPaymentDate = (current: any) => {
+    if (!loan) return false;
+    const isBeforeStart = current && current < dayjs(loan.startDate).startOf('day');
+    if (isBeforeStart) return true;
+    
+    if (payments.length > 0) {
+      const latestDate = dayjs(payments[0].paymentDate).startOf('day');
+      return current && current < latestDate;
+    }
+    return false;
+  };
+
+  const amortizationData = useMemo(() => {
+    if (!loan) return [];
+    const rows = [];
+    let currentPrincipal = new Decimal(loan.outstandingPrincipal);
+    const originalPrincipal = new Decimal(loan.principal);
+    const rate = new Decimal(loan.interestRate).div(100);
+    const installment = new Decimal(simInstallment || 0);
+
+    if (installment.isZero()) return [];
+
+    let count = 0;
+    while (currentPrincipal.greaterThan(0) && count < 120) {
+      count++;
+      let interest = new Decimal(0);
+      
+      if (loan.interestType.includes('flat')) {
+        interest = originalPrincipal.mul(rate).div(12);
+      } else {
+        interest = currentPrincipal.mul(rate).div(12);
+      }
+      
+      interest = interest.toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+      
+      let principalPortion = installment.minus(interest);
+      if (principalPortion.isNegative() || principalPortion.isZero()) {
+        rows.push({
+          key: count,
+          index: count,
+          beginningBalance: currentPrincipal.toNumber(),
+          interest: interest.toNumber(),
+          principalPortion: 0,
+          endingBalance: currentPrincipal.toNumber(),
+          error: 'ยอดผ่อนน้อยกว่าดอกเบี้ยในงวดนี้'
+        });
+        break;
+      }
+      
+      if (currentPrincipal.lessThan(principalPortion)) {
+        principalPortion = currentPrincipal;
+      }
+      
+      const endingBalance = currentPrincipal.minus(principalPortion);
+      
+      rows.push({
+        key: count,
+        index: count,
+        beginningBalance: currentPrincipal.toNumber(),
+        interest: interest.toNumber(),
+        principalPortion: principalPortion.toNumber(),
+        endingBalance: endingBalance.toNumber(),
+      });
+      
+      currentPrincipal = endingBalance;
+    }
+    return rows;
+  }, [loan, simInstallment]);
+
+  const amortizationColumns = [
+    {
+      title: 'งวดที่',
+      dataIndex: 'index',
+      key: 'index',
+      width: 80,
+      align: 'center' as const,
+    },
+    {
+      title: 'ยอดต้นคงเหลือยกมา',
+      dataIndex: 'beginningBalance',
+      key: 'beginningBalance',
+      align: 'right' as const,
+      render: (v: number) => fmt(v),
+    },
+    {
+      title: 'ดอกเบี้ยในงวด',
+      dataIndex: 'interest',
+      key: 'interest',
+      align: 'right' as const,
+      render: (v: number) => <span style={{ color: '#d97706' }}>{fmt(v)}</span>,
+    },
+    {
+      title: 'หักเงินต้น',
+      dataIndex: 'principalPortion',
+      key: 'principalPortion',
+      align: 'right' as const,
+      render: (v: number, record: any) => 
+        record.error ? <span style={{ color: 'var(--color-danger)', fontSize: 11 }}>{record.error}</span> : <span style={{ color: 'var(--color-primary)' }}>{fmt(v)}</span>,
+    },
+    {
+      title: 'เงินต้นคงเหลือปลายงวด',
+      dataIndex: 'endingBalance',
+      key: 'endingBalance',
+      align: 'right' as const,
+      render: (v: number) => <span style={{ fontWeight: 600 }}>{fmt(v)}</span>,
+    },
+  ];
 
   const fetchLoanData = useCallback(async () => {
     setLoading(true);
@@ -247,7 +365,15 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
       render: (v) => <Text style={{ color: 'var(--color-success)', fontWeight: 700 }}>{fmt(v)}</Text>,
     },
     {
-      title: 'หักดอกเบี้ย',
+      title: 'หักดอกเบี้ยปรับ',
+      dataIndex: 'penaltyPortion',
+      key: 'penaltyPortion',
+      align: 'right',
+      width: 125,
+      render: (v) => <Text style={{ color: '#dc2626', fontSize: 13 }}>{v ? fmt(v) : '฿0.00'}</Text>,
+    },
+    {
+      title: 'หักดอกเบี้ยปกติ',
       dataIndex: 'interestPortion',
       key: 'interestPortion',
       align: 'right',
@@ -430,18 +556,61 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
               </Descriptions>
             </Card>
 
-            {/* Payment history */}
+            {/* Payment history and Amortization Schedule Tabs */}
             <Card
-              title={<><HistoryOutlined /> ประวัติการชำระเงิน</>}
+              styles={{ body: { padding: '12px 16px' } }}
               style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}
             >
-              <Table<PaymentRow>
-                columns={paymentColumns}
-                dataSource={payments}
-                rowKey="id"
-                size="small"
-                pagination={{ pageSize: 5 }}
-                locale={{ emptyText: 'ยังไม่มีประวัติการชำระเงิน' }}
+              <Tabs
+                defaultActiveKey="history"
+                items={[
+                  {
+                    key: 'history',
+                    label: <span style={{ fontWeight: 600 }}><HistoryOutlined /> ประวัติการชำระเงินจริง</span>,
+                    children: (
+                      <Table<PaymentRow>
+                        columns={paymentColumns}
+                        dataSource={payments}
+                        rowKey="id"
+                        size="middle"
+                        pagination={{ pageSize: 5 }}
+                        locale={{ emptyText: 'ยังไม่มีประวัติการชำระเงิน' }}
+                      />
+                    )
+                  },
+                  {
+                    key: 'simulator',
+                    label: <span style={{ fontWeight: 600 }}><DollarCircleOutlined /> ตารางผ่อนชำระจำลอง (Amortization)</span>,
+                    children: (
+                      <div style={{ marginTop: 8 }}>
+                        <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                            ระบุยอดที่ต้องการทดลองผ่อนต่อเดือน (บาท):
+                          </span>
+                          <InputNumber
+                            min={1}
+                            style={{ width: 180 }}
+                            value={simInstallment}
+                            onChange={(v) => setSimInstallment(v ?? 0)}
+                            formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={(v) => v!.replace(/\$\s?|(,*)/g, '')}
+                          />
+                          <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
+                            *คำนวณจากยอดต้นคงเหลือ {fmt(loan.outstandingPrincipal)}
+                          </span>
+                        </div>
+                        
+                        <Table
+                          columns={amortizationColumns}
+                          dataSource={amortizationData}
+                          size="middle"
+                          pagination={{ pageSize: 10 }}
+                          locale={{ emptyText: 'ระบุยอดผ่อนชำระเพื่อเริ่มคำนวณ' }}
+                        />
+                      </div>
+                    )
+                  }
+                ]}
               />
             </Card>
           </Space>
@@ -566,7 +735,7 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
             label="วันที่ชำระเงิน"
             rules={[{ required: true, message: 'กรุณาเลือกวันที่' }]}
           >
-            <DatePicker style={{ width: '100%' }} size="large" />
+            <DatePicker style={{ width: '100%' }} size="large" disabledDate={disabledPaymentDate} />
           </Form.Item>
 
           <Form.Item

@@ -134,6 +134,32 @@ export function daysBetween(from: Date, to: Date): number {
 }
 
 /**
+ * คำนวณดอกเบี้ยปรับสำหรับรายวันที่เกินกำหนด (ตามกฎหมายไทย 15% ต่อปี คิดจากเงินต้นคงเหลือ)
+ */
+export function calculatePenaltyInterest(
+  outstandingPrincipal: Decimal,
+  dueDateStr: string,
+  toDate: Date
+): Decimal {
+  const dueDate = new Date(dueDateStr);
+  const days = daysBetween(dueDate, toDate);
+  if (days <= 0) return new Decimal(0);
+
+  // ดอกเบี้ยปรับ = เงินต้นคงเหลือ * 15% * จำนวนวันค้างชำระ / 365
+  return outstandingPrincipal
+    .mul('0.15')
+    .mul(days)
+    .div(365)
+    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+}
+
+export interface AccruedInterestResult {
+  normalAccrued: Decimal;
+  penaltyAccrued: Decimal;
+  totalAccrued: Decimal;
+}
+
+/**
  * คำนวณดอกเบี้ยสะสม ณ วันนี้ สำหรับแสดงในหน้า Dashboard
  * (ใช้สำหรับ real-time display ก่อนมีการชำระ)
  */
@@ -145,7 +171,8 @@ export function calculateCurrentAccruedInterest(params: {
   lastInterestCalcDate: string | null;
   startDate: string;
   existingAccruedInterest: string; // ดอกเบี้ยค้างที่บันทึกไว้แล้ว
-}): Decimal {
+  dueDate: string; // วันครบกำหนดสำหรับคำนวณเบี้ยปรับ
+}): AccruedInterestResult {
   const lastCalc = params.lastInterestCalcDate ?? params.startDate;
   const fromDate = new Date(lastCalc);
   
@@ -162,7 +189,18 @@ export function calculateCurrentAccruedInterest(params: {
     toDate,
   });
 
-  return new Decimal(params.existingAccruedInterest)
-    .plus(newInterest)
-    .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+  const penaltyAccrued = calculatePenaltyInterest(
+    new Decimal(params.outstandingPrincipal),
+    params.dueDate,
+    toDate
+  );
+
+  const normalAccrued = new Decimal(params.existingAccruedInterest).plus(newInterest);
+  const totalAccrued = normalAccrued.plus(penaltyAccrued).toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
+
+  return {
+    normalAccrued: normalAccrued.toDecimalPlaces(2, Decimal.ROUND_HALF_UP),
+    penaltyAccrued,
+    totalAccrued,
+  };
 }

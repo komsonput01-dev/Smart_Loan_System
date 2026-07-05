@@ -17,24 +17,28 @@ interface AllocatePaymentParams {
   amountPaid: Decimal;
   accruedInterest: Decimal;      // ดอกเบี้ยสะสมทั้งหมด ณ วันที่ชำระ
   outstandingPrincipal: Decimal; // เงินต้นคงเหลือก่อนชำระ
+  penaltyInterest?: Decimal;     // ดอกเบี้ยปรับสะสม (ถ้ามี)
 }
 
 export interface PaymentAllocation {
   amountPaid: Decimal;
-  interestPortion: Decimal;      // ส่วนที่หักดอกเบี้ย
+  penaltyPortion: Decimal;       // ส่วนที่หักดอกเบี้ยปรับ
+  interestPortion: Decimal;      // ส่วนที่หักดอกเบี้ยปกติ
   principalPortion: Decimal;     // ส่วนที่หักเงินต้น
+  remainingPenalty: Decimal;     // ดอกเบี้ยปรับคงเหลือหลังชำระ
   remainingInterest: Decimal;    // ดอกเบี้ยค้างหลังชำระ
   remainingPrincipal: Decimal;   // เงินต้นคงเหลือหลังชำระ
   overpayment: Decimal;          // เงินเกิน (ถ้ามี)
 }
 
 /**
- * ตัดยอดเงินชำระ: ดอกเบี้ยก่อน → เงินต้น
+ * ตัดยอดเงินชำระ: ดอกเบี้ยปรับก่อน → ดอกเบี้ยปกติ → เงินต้น
  */
 export function allocatePayment({
   amountPaid,
   accruedInterest,
   outstandingPrincipal,
+  penaltyInterest = new Decimal(0),
 }: AllocatePaymentParams): PaymentAllocation {
   // Validate inputs
   if (amountPaid.isNegative()) {
@@ -46,23 +50,30 @@ export function allocatePayment({
 
   let remaining = amountPaid;
 
-  // ── Step 1: ตัดดอกเบี้ยก่อน ──────────────────────────────────────────────
+  // ── Step 1: ตัดดอกเบี้ยปรับก่อน ───────────────────────────────────────────
+  const penaltyPortion = Decimal.min(remaining, penaltyInterest);
+  const remainingPenalty = penaltyInterest.minus(penaltyPortion);
+  remaining = remaining.minus(penaltyPortion);
+
+  // ── Step 2: ตัดดอกเบี้ยปกติ ──────────────────────────────────────────────
   const interestPortion = Decimal.min(remaining, accruedInterest);
   const remainingInterest = accruedInterest.minus(interestPortion);
   remaining = remaining.minus(interestPortion);
 
-  // ── Step 2: ตัดเงินต้น ───────────────────────────────────────────────────
+  // ── Step 3: ตัดเงินต้น ───────────────────────────────────────────────────
   const principalPortion = Decimal.min(remaining, outstandingPrincipal);
   const remainingPrincipal = outstandingPrincipal.minus(principalPortion);
   remaining = remaining.minus(principalPortion);
 
-  // ── Step 3: เงินเกิน (overpayment) ─────────────────────────────────────
+  // ── Step 4: เงินเกิน (overpayment) ─────────────────────────────────────
   const overpayment = remaining; // ถ้า > 0 แสดงว่าจ่ายเกิน
 
   return {
     amountPaid: amountPaid.toDecimalPlaces(2),
+    penaltyPortion: penaltyPortion.toDecimalPlaces(2),
     interestPortion: interestPortion.toDecimalPlaces(2),
     principalPortion: principalPortion.toDecimalPlaces(2),
+    remainingPenalty: remainingPenalty.toDecimalPlaces(2),
     remainingInterest: remainingInterest.toDecimalPlaces(2),
     remainingPrincipal: remainingPrincipal.toDecimalPlaces(2),
     overpayment: overpayment.toDecimalPlaces(2),

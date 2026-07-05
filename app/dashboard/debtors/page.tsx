@@ -28,6 +28,7 @@ import {
   SearchOutlined,
   EditOutlined,
   EyeOutlined,
+  EyeInvisibleOutlined,
   ReloadOutlined,
   SaveOutlined,
   DeleteOutlined,
@@ -57,6 +58,23 @@ interface DebtorRow {
   hasUpcoming: boolean;
 }
 
+const maskPhone = (phone: string | null) => {
+  if (!phone) return '—';
+  const clean = phone.replace(/-/g, '').trim();
+  if (clean.length < 8) return phone;
+  return `${clean.substring(0, 3)}-***-**${clean.substring(clean.length - 2)}`;
+};
+
+const maskEmail = (email: string | null) => {
+  if (!email) return 'ไม่ระบุอีเมล';
+  const parts = email.split('@');
+  if (parts.length !== 2) return email;
+  const local = parts[0];
+  const domain = parts[1];
+  if (local.length <= 2) return `${local}***@${domain}`;
+  return `${local.substring(0, 2)}***${local.substring(local.length - 1)}@${domain}`;
+};
+
 const fmt = (v: string | number) =>
   `฿${Number(v).toLocaleString('th-TH', { minimumFractionDigits: 2 })}`;
 
@@ -83,6 +101,27 @@ export default function DebtorsPage() {
   const [saving, setSaving] = useState(false);
   const [editingDebtor, setEditingDebtor] = useState<DebtorRow | null>(null);
   
+  const [revealedPhones, setRevealedPhones] = useState<Set<string>>(new Set());
+  const [revealedEmails, setRevealedEmails] = useState<Set<string>>(new Set());
+
+  const togglePhoneReveal = (id: string) => {
+    setRevealedPhones((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleEmailReveal = (id: string) => {
+    setRevealedEmails((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const [form] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
@@ -211,8 +250,21 @@ export default function DebtorsPage() {
               <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: 13, lineHeight: 1.4 }}>
                 {r.fullName ?? '—'}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
-                {r.email ?? 'ไม่ระบุอีเมล'}
+              <div style={{ fontSize: 11, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                {r.email ? (
+                  <>
+                    <span>{revealedEmails.has(r.id) ? r.email : maskEmail(r.email)}</span>
+                    <Button
+                      type="text"
+                      size="small"
+                      icon={revealedEmails.has(r.id) ? <EyeInvisibleOutlined style={{ fontSize: 11 }} /> : <EyeOutlined style={{ fontSize: 11 }} />}
+                      onClick={(e) => { e.stopPropagation(); toggleEmailReveal(r.id); }}
+                      style={{ padding: 0, width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                    />
+                  </>
+                ) : (
+                  'ไม่ระบุอีเมล'
+                )}
               </div>
             </div>
           </div>
@@ -222,9 +274,22 @@ export default function DebtorsPage() {
     {
       title: 'เบอร์โทร',
       key: 'phone',
-      width: 140,
+      width: 155,
       render: (_, r) => (
-        <Text style={{ fontSize: 13 }}>{r.phone ?? <span style={{ color: 'var(--color-text-muted)' }}>—</span>}</Text>
+        <Space size={4} align="center">
+          <Text style={{ fontSize: 13 }}>
+            {r.phone ? (revealedPhones.has(r.id) ? r.phone : maskPhone(r.phone)) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
+          </Text>
+          {r.phone && (
+            <Button
+              type="text"
+              size="small"
+              icon={revealedPhones.has(r.id) ? <EyeInvisibleOutlined style={{ fontSize: 11 }} /> : <EyeOutlined style={{ fontSize: 11 }} />}
+              onClick={(e) => { e.stopPropagation(); togglePhoneReveal(r.id); }}
+              style={{ padding: 0, width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+            />
+          )}
+        </Space>
       ),
     },
     {

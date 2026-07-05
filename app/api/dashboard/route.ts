@@ -21,28 +21,31 @@ export async function GET() {
 
     const isDebtor = currentUser.role === 'debtor';
 
-    // ── 1. KPI aggregates ─────────────────────────────────────────────────────
+    // ── 1. KPI aggregates (Inner join to only include active users) ────────────
     const kpiQuery = db
       .select({
         totalPrincipal: sql<string>`COALESCE(SUM(${loans.principal}), '0')`,
         totalOutstanding: sql<string>`COALESCE(SUM(${loans.outstandingPrincipal}), '0')`,
         totalInterestCollected: sql<string>`COALESCE(SUM(${loans.totalInterestCollected}), '0')`,
-        totalLoans: sql<number>`COUNT(*)`,
+        totalLoans: sql<number>`COUNT(${loans.id})`,
         activeCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'active')`,
         upcomingCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'upcoming')`,
         overdueCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'overdue')`,
         nplCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'npl')`,
         closedCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'closed')`,
       })
-      .from(loans);
+      .from(loans)
+      .innerJoin(users, eq(loans.userId, users.id));
 
     if (isDebtor) {
-      kpiQuery.where(eq(loans.userId, currentUser.id));
+      kpiQuery.where(and(eq(loans.userId, currentUser.id), eq(users.isActive, true)));
+    } else {
+      kpiQuery.where(eq(users.isActive, true));
     }
 
     const [kpi] = await kpiQuery;
 
-    // ── 2. Debtor rows (one row per loan, with user info) ─────────────────────
+    // ── 2. Debtor rows (one row per loan, with active user info) ─────────────
     const debtorsQuery = db
       .select({
         // Loan identity
@@ -66,10 +69,12 @@ export async function GET() {
         status: loans.status,
       })
       .from(loans)
-      .leftJoin(users, eq(loans.userId, users.id));
+      .innerJoin(users, eq(loans.userId, users.id)); // Use innerJoin to hide loans of soft-deleted debtors
 
     if (isDebtor) {
-      debtorsQuery.where(eq(loans.userId, currentUser.id));
+      debtorsQuery.where(and(eq(loans.userId, currentUser.id), eq(users.isActive, true)));
+    } else {
+      debtorsQuery.where(eq(users.isActive, true));
     }
 
     const debtors = await debtorsQuery.orderBy(desc(loans.createdAt));
