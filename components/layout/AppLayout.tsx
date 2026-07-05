@@ -41,7 +41,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
   const sidebarWidth = isMobile ? 0 : sidebarCollapsed ? 72 : 256;
 
   return (
-    <Layout style={{ minHeight: '100vh', background: 'var(--color-bg-base)' }}>
+    <Layout style={{ minHeight: '100vh', background: 'transparent' }}>
       {/* Sidebar */}
       <AppSidebar
         collapsed={sidebarCollapsed}
@@ -55,7 +55,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
         style={{
           marginLeft: isMobile ? 0 : sidebarWidth,
           transition: 'margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          background: 'var(--color-bg-base)',
+          background: 'transparent',
         }}
       >
         {/* Fixed Header */}
@@ -70,7 +70,7 @@ export default function AppLayout({ children, pageTitle }: AppLayoutProps) {
           style={{
             minHeight: '100vh',
             padding: 0,
-            background: 'var(--color-bg-base)',
+            background: 'transparent',
           }}
         >
           <div className="page-container">{children}</div>
