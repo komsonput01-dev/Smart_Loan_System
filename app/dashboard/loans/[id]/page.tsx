@@ -593,7 +593,7 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
                             value={simInstallment}
                             onChange={(v) => setSimInstallment(v ?? 0)}
                             formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                            parser={(v) => v!.replace(/\$\s?|(,*)/g, '')}
+                            parser={(v) => Number(v?.replace(/\$\s?|(,*)/g, '') || 0)}
                           />
                           <span style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>
                             *คำนวณจากยอดต้นคงเหลือ {fmt(loan.outstandingPrincipal)}
