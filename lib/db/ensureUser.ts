@@ -55,6 +55,37 @@ export async function ensureUser(): Promise<User | null> {
     clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
       ?.emailAddress ?? null;
 
+  // 2. If not found by clerkUserId, try to find an existing user by email
+  if (primaryEmail) {
+    const existingByEmail = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, primaryEmail))
+      // Order by created_at asc to prefer the older (original) record in case of duplicates
+      .orderBy(users.createdAt)
+      .limit(1);
+
+    if (existingByEmail.length > 0) {
+      const userToLink = existingByEmail[0];
+      
+      // If this record has a different clerkUserId, update it to bind to the new Clerk account
+      if (userToLink.clerkUserId !== clerkUserId) {
+        const [updated] = await db
+          .update(users)
+          .set({ clerkUserId, role: roleFromClerk ?? userToLink.role, updatedAt: new Date() })
+          .where(eq(users.id, userToLink.id))
+          .returning();
+        
+        console.log(`[ensureUser] 🔗 Linked new Clerk account to existing user by email: ${primaryEmail}`);
+        
+        // Cleanup: If there happens to be an empty duplicate record with the new clerkUserId (from a previous failed sync), delete it.
+        // Wait, since we are doing this during ensureUser and the new clerkUserId wasn't found in step 1, there shouldn't be a duplicate.
+        // However, if there was a duplicate, we could delete it here. Since existing.length === 0 (we are here because step 1 failed), there is no duplicate.
+        return updated;
+      }
+    }
+  }
+
   const fullName =
     [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
     primaryEmail?.split('@')[0] ||
