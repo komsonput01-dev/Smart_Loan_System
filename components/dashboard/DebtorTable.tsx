@@ -402,6 +402,29 @@ export default function DebtorTable({
       ),
     },
     {
+      title: 'ดอกเบี้ยค้าง',
+      key: 'accrued',
+      width: 150,
+      align: 'right',
+      render: (_, record) => (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', justifyContent: 'center' }}>
+          <span className="font-tabular" style={{ fontWeight: 600, color: '#d97706' }}>
+            {formatCurrency(record.currentNormalAccrued ?? 0)}
+          </span>
+          {record.currentPenaltyAccrued && record.currentPenaltyAccrued > 0 ? (
+            <div style={{ fontSize: 11, color: '#dc2626', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <WarningFilled style={{ fontSize: 10 }} />
+              ปรับ {formatCurrency(record.currentPenaltyAccrued)}
+            </div>
+          ) : (
+            <div style={{ fontSize: 11, color: 'var(--color-text-muted)', marginTop: 2 }}>
+              ปกติ
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
       title: 'อัตราดอกเบี้ย',
       key: 'rate',
       width: 150,

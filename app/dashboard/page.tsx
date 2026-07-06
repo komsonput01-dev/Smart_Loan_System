@@ -33,6 +33,8 @@ export default function DashboardPage() {
       dueDate: String(row.dueDate ?? ''),
       status: String(row.status ?? 'active') as Debtor['status'],
       overdueDays: Number(row.overdueDays ?? 0),
+      currentNormalAccrued: Number(row.currentNormalAccrued ?? 0),
+      currentPenaltyAccrued: Number(row.currentPenaltyAccrued ?? 0),
       phone: String(row.phone ?? ''),
     };
   }, []);

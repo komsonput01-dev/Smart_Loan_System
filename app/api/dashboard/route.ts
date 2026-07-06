@@ -74,6 +74,7 @@ export async function GET() {
         startDate: loans.startDate,
         dueDate: loans.dueDate,
         status: loans.status,
+        lastInterestCalcDate: loans.lastInterestCalcDate,
       })
       .from(loans)
       .innerJoin(users, eq(loans.userId, users.id)); // Use innerJoin to hide loans of soft-deleted debtors
@@ -92,13 +93,32 @@ export async function GET() {
 
     const debtors = await debtorsQuery.orderBy(desc(loans.createdAt));
 
-    // ── 3. Compute overdue days client-side friendly ───────────────────────────
+    // ── 3. Compute overdue days and real-time interest client-side friendly ─────────
+    const { calculateCurrentAccruedInterest } = await import('@/lib/interest-calculator');
     const today = new Date();
+
     const enriched = debtors.map((row) => {
       const due = new Date(row.dueDate);
       const diffMs = today.getTime() - due.getTime();
       const overdueDays = diffMs > 0 ? Math.floor(diffMs / 86_400_000) : 0;
-      return { ...row, overdueDays };
+
+      const currentInterest = calculateCurrentAccruedInterest({
+        outstandingPrincipal: row.outstanding,
+        originalPrincipal: row.principal,
+        interestRate: row.interestRate,
+        interestType: row.interestType as any,
+        lastInterestCalcDate: row.lastInterestCalcDate,
+        startDate: row.startDate,
+        existingAccruedInterest: row.accruedInterest,
+        dueDate: row.dueDate,
+      });
+
+      return { 
+        ...row, 
+        overdueDays,
+        currentNormalAccrued: currentInterest.normalAccrued.toNumber(),
+        currentPenaltyAccrued: currentInterest.penaltyAccrued.toNumber(),
+      };
     });
 
     return NextResponse.json({ kpi, debtors: enriched });

@@ -25,6 +25,8 @@ export interface Debtor {
   dueDate: string;
   status: LoanStatus;
   overdueDays?: number;
+  currentNormalAccrued?: number;
+  currentPenaltyAccrued?: number;
   phone?: string;
   avatarColor?: string;
 }
