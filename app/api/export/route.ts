@@ -92,6 +92,7 @@ export async function GET() {
         loanId: payments.loanId,
         paymentDate: payments.paymentDate,
         amountPaid: payments.amountPaid,
+        penaltyPortion: payments.penaltyPortion,
         interestPortion: payments.interestPortion,
         principalPortion: payments.principalPortion,
         remainingPrincipal: payments.remainingPrincipal,
@@ -99,13 +100,25 @@ export async function GET() {
       .from(payments)
       .orderBy(payments.paymentDate);
 
-    // Join payments into raw rows for export
+    // ── 3. Compute real-time interest and prepare raw rows ─────────────
+    const { calculateCurrentAccruedInterest } = await import('@/lib/interest-calculator');
     const rawRows = rawData.map((loanRow) => {
       const loanPayments = allPayments.filter((p) => p.loanId === loanRow.loanId);
       const totalAmountPaid = loanPayments.reduce(
         (sum, p) => sum.plus(new Decimal(p.amountPaid)),
         new Decimal('0')
       );
+
+      const currentInterest = calculateCurrentAccruedInterest({
+        outstandingPrincipal: loanRow.outstandingPrincipal,
+        originalPrincipal: loanRow.principal,
+        interestRate: loanRow.interestRate,
+        interestType: loanRow.interestType as any,
+        lastInterestCalcDate: loanRow.lastInterestCalcDate,
+        startDate: loanRow.startDate,
+        existingAccruedInterest: loanRow.accruedInterest,
+        dueDate: loanRow.dueDate,
+      });
 
       return {
         'รหัสสัญญา': loanRow.note?.replace('รหัสสัญญา: ', '') || loanRow.loanId.substring(0, 8),
@@ -115,7 +128,9 @@ export async function GET() {
         'LINE User ID': loanRow.debtorLineId || '—',
         'เงินต้นเริ่มแรก': Number(loanRow.principal),
         'เงินต้นคงเหลือ': Number(loanRow.outstandingPrincipal),
-        'ดอกเบี้ยค้างจ่ายสะสม': Number(loanRow.accruedInterest),
+        'ดอกเบี้ยค้างจ่ายสะสม (ฐานข้อมูล)': Number(loanRow.accruedInterest),
+        'ดอกเบี้ยปกติค้างชำระ ณ ปัจจุบัน': currentInterest.normalAccrued.toNumber(),
+        'เบี้ยปรับค้างชำระ ณ ปัจจุบัน': currentInterest.penaltyAccrued.toNumber(),
         'รวมดอกเบี้ยที่เก็บได้': Number(loanRow.totalInterestCollected),
         'ยอดชำระคืนรวม': totalAmountPaid.toNumber(),
         'อัตราดอกเบี้ย (%)': Number(loanRow.interestRate),
@@ -125,11 +140,26 @@ export async function GET() {
         'วันที่สิ้นสุดสัญญา': loanRow.dueDate,
         'วันที่คิดดอกเบี้ยล่าสุด': loanRow.lastInterestCalcDate || '—',
       };
+    // ── 4. Prepare Payment Data (Payment_History) ─────────────
+    const paymentRows = allPayments.map((p) => {
+      // Find associated loan to get debtor name
+      const loan = rawData.find((l) => l.loanId === p.loanId);
+      return {
+        'วันที่บันทึกชำระ': p.paymentDate,
+        'ชื่อลูกหนี้': loan?.debtorName || '—',
+        'รหัสสัญญา': loan?.note?.replace('รหัสสัญญา: ', '') || p.loanId.substring(0, 8),
+        'ยอดชำระทั้งหมด': Number(p.amountPaid),
+        'ตัดชำระดอกเบี้ยปรับ': Number((p as any).penaltyPortion || 0),
+        'ตัดชำระดอกเบี้ยปกติ': Number(p.interestPortion),
+        'ตัดชำระเงินต้น': Number(p.principalPortion),
+        'เงินต้นคงเหลือ': Number(p.remainingPrincipal),
+      };
     });
 
     return NextResponse.json({
       summary: summaryData,
       rawRows,
+      paymentRows,
     });
   } catch (error) {
     console.error('[GET /api/export]', error);

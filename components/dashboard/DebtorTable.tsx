@@ -234,7 +234,7 @@ export default function DebtorTable({
         throw new Error('ไม่สามารถดึงข้อมูลรายงานได้');
       }
       const result = await res.json();
-      const { summary, rawRows } = result;
+      const { summary, rawRows, paymentRows } = result;
 
       // 1. Create Summary Sheet Data
       const summaryRows = [
@@ -275,12 +275,31 @@ export default function DebtorTable({
         wch: Math.min(50, Math.max(12, maxColWidths[key])),
       }));
 
-      // 3. Create Workbook and Append Sheets
+      // 3. Create Payment History Sheet
+      const wsPayments = XLSX.utils.json_to_sheet(paymentRows || []);
+      
+      const maxPayColWidths = (paymentRows || []).reduce((acc: Record<string, number>, row: any) => {
+        Object.keys(row).forEach((key) => {
+          const val = String(row[key] ?? '');
+          const len = val.length > 0 ? val.length * 1.5 : 10;
+          acc[key] = Math.max(acc[key] || 10, len, key.length * 1.8);
+        });
+        return acc;
+      }, {});
+
+      wsPayments['!cols'] = Object.keys(maxPayColWidths).map((key) => ({
+        wch: Math.min(50, Math.max(12, maxPayColWidths[key])),
+      }));
+
+      // 4. Create Workbook and Append Sheets
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
       XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw_Data');
+      if (paymentRows && paymentRows.length > 0) {
+        XLSX.utils.book_append_sheet(wb, wsPayments, 'Payment_History');
+      }
 
-      // 4. Save file
+      // 5. Save file
       XLSX.writeFile(wb, `SmartLoan_Report_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`);
       messageApi.success('ดาวน์โหลดรายงาน Excel เรียบร้อยแล้ว');
     } catch (err: any) {
