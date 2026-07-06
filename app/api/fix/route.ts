@@ -17,16 +17,16 @@ export async function GET(req: Request) {
       const originalUser = matchedUsers[0];
       const newUser = matchedUsers[1];
 
-      // Update original user with the new clerkUserId
+      // 1. Delete the new empty user FIRST to free up the unique clerkUserId
+      await db
+        .delete(users)
+        .where(eq(users.id, newUser.id));
+
+      // 2. Update original user with the new clerkUserId
       await db
         .update(users)
         .set({ clerkUserId: newUser.clerkUserId })
         .where(eq(users.id, originalUser.id));
-
-      // Delete the new empty user
-      await db
-        .delete(users)
-        .where(eq(users.id, newUser.id));
 
       return NextResponse.json({ message: 'Fixed successfully' });
     }
