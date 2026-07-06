@@ -162,8 +162,8 @@ body::after {
   border-radius: var(--radius-md) !important;
   margin: 2px 12px !important;
   width: calc(100% - 24px) !important;
-  font-weight: 500;
-  color: var(--color-text-secondary) !important;
+  font-weight: 600;
+  color: var(--color-primary-medium) !important;
   transition: all var(--transition-base) !important;
 }
 
@@ -211,9 +211,9 @@ body::after {
 
 .ant-table-thead > tr > th {
   background: rgba(248, 250, 252, 0.9) !important;
-  color: var(--color-text-secondary) !important;
-  font-weight: 600 !important;
-  font-size: var(--font-size-xs) !important;
+  color: var(--color-primary-medium) !important;
+  font-weight: 700 !important;
+  font-size: 12px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.05em !important;
   border-bottom: 1px solid var(--color-border) !important;
