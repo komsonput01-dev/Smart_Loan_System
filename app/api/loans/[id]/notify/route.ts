@@ -27,9 +27,9 @@ export async function POST(req: Request, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify admin role
-    if (currentUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin or staff role
+    if (currentUser.role !== 'admin' && currentUser.role !== 'staff') {
+      return NextResponse.json({ error: 'Admin or Staff access required' }, { status: 403 });
     }
 
     const { id } = await params;

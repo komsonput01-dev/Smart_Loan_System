@@ -112,12 +112,24 @@ export default function SettingsPage() {
   const handleTestLine = async (values: any) => {
     setTestingLine(true);
     try {
-      // Call mock or real notify test
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lineUserId: values.testLineUserId,
+          messageText: values.testMessage,
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'ส่งข้อความไม่สำเร็จ');
+      }
+
       messageApi.success('ส่งข้อความ LINE เรียบร้อยแล้ว');
       lineForm.resetFields(['testMessage']);
-    } catch {
-      messageApi.error('ส่งข้อความไม่สำเร็จ ตรวจสอบสัญญาณอินเทอร์เน็ต');
+    } catch (err: any) {
+      messageApi.error(err.message || 'ส่งข้อความไม่สำเร็จ ตรวจสอบสัญญาณอินเทอร์เน็ต');
     } finally {
       setTestingLine(false);
     }
