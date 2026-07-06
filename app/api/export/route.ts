@@ -140,6 +140,8 @@ export async function GET() {
         'วันที่สิ้นสุดสัญญา': loanRow.dueDate,
         'วันที่คิดดอกเบี้ยล่าสุด': loanRow.lastInterestCalcDate || '—',
       };
+    });
+
     // ── 4. Prepare Payment Data (Payment_History) ─────────────
     const paymentRows = allPayments.map((p) => {
       // Find associated loan to get debtor name
