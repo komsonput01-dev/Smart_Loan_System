@@ -32,6 +32,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import dayjs from 'dayjs';
 
 const { Text, Title, Paragraph } = Typography;
@@ -66,6 +67,9 @@ function PaymentsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedLoanId = searchParams.get('loanId');
+
+  const { user: clerkUser } = useUser();
+  const isDebtor = clerkUser?.publicMetadata?.role === 'debtor';
 
   const [payments, setPayments] = useState<PaymentHistoryRow[]>([]);
   const [loans, setLoans] = useState<LoanOption[]>([]);
@@ -107,11 +111,13 @@ function PaymentsContent() {
   }, [fetchPayments]);
 
   useEffect(() => {
-    // Auto open drawer if action=new in URL
+    // Auto open drawer if action=new in URL (and user is admin/staff)
     if (searchParams.get('action') === 'new' && !drawerOpen) {
-      setDrawerOpen(true);
+      if (!isDebtor) {
+        setDrawerOpen(true);
+      }
     }
-  }, [searchParams]);
+  }, [searchParams, isDebtor, drawerOpen]);
 
   useEffect(() => {
     if (drawerOpen) {
@@ -264,14 +270,25 @@ function PaymentsContent() {
           <Tooltip title="รีเฟรชข้อมูล">
             <Button icon={<ReloadOutlined />} onClick={fetchPayments} loading={loading} />
           </Tooltip>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setDrawerOpen(true)}
-            style={{ fontWeight: 600 }}
-          >
-            + บันทึกชำระเงินใหม่
-          </Button>
+          {!isDebtor ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setDrawerOpen(true)}
+              style={{ fontWeight: 600 }}
+            >
+              + บันทึกชำระเงินใหม่
+            </Button>
+          ) : (
+            <Button
+              type="primary"
+              icon={<DollarCircleOutlined />}
+              onClick={() => window.open('https://line.me/ti/p/~@your_admin_oa', '_blank')}
+              style={{ fontWeight: 600, backgroundColor: '#06c755', borderColor: '#06c755' }}
+            >
+              แจ้งชำระเงินผ่าน LINE
+            </Button>
+          )}
         </Space>
       </div>
 
@@ -333,40 +350,40 @@ function PaymentsContent() {
             <span style={{ fontWeight: 700 }}>บันทึกการชำระเงินใหม่</span>
           </div>
         }
-        open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); form.resetFields(); }}
+        placement="right"
         width={500}
-        footer={
-          <div style={{ textAlign: 'right', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button onClick={() => { setDrawerOpen(false); form.resetFields(); }}>
-              ยกเลิก
-            </Button>
-            <Button
-              type="primary"
-              loading={saving}
-              icon={<PlusOutlined />}
-              onClick={() => form.submit()}
-            >
-              บันทึกการชำระ
-            </Button>
-          </div>
+        onClose={() => {
+          setDrawerOpen(false);
+          form.resetFields();
+        }}
+        open={drawerOpen}
+        extra={
+          <Space>
+            <Button onClick={() => { setDrawerOpen(false); form.resetFields(); }}>ยกเลิก</Button>
+            {!isDebtor && (
+              <Button type="primary" onClick={() => form.submit()} loading={saving} icon={<PlusOutlined />}>
+                บันทึกการชำระ
+              </Button>
+            )}
+          </Space>
         }
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleRecordPayment}
-          requiredMark={false}
-          initialValues={{
-            paymentDate: dayjs(),
-          }}
-        >
-          <Form.Item
-            name="loanId"
-            label="เลือกสัญญาเงินกู้ที่ชำระ"
-            rules={[{ required: true, message: 'กรุณาเลือกสัญญาเงินกู้' }]}
+        {!isDebtor ? (
+          <Form
+            form={form}
+            layout="vertical"
+            onFinish={handleRecordPayment}
+            requiredMark={false}
+            initialValues={{
+              paymentDate: dayjs(),
+            }}
           >
-            <Select
+            <Form.Item
+              name="loanId"
+              label="เลือกสัญญาเงินกู้ที่ชำระ"
+              rules={[{ required: true, message: 'กรุณาเลือกสัญญาเงินกู้' }]}
+            >
+              <Select
               showSearch
               placeholder="ค้นหาชื่อผู้กู้ หรือรหัสสัญญา..."
               optionFilterProp="children"
@@ -434,6 +451,24 @@ function PaymentsContent() {
             💡 <strong>การปันส่วนยอดชำระ:</strong> ระบบจะนำยอดเงินไปหักล้างดอกเบี้ยค้างจ่ายสะสมก่อน จากนั้นเงินส่วนที่เหลือจะนำไปหักลดเงินต้นคงเหลือโดยอัตโนมัติ
           </div>
         </Form>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px 16px' }}>
+            <DollarCircleOutlined style={{ fontSize: 48, color: '#06c755', marginBottom: 16 }} />
+            <Title level={4}>ต้องการแจ้งชำระเงิน?</Title>
+            <Paragraph type="secondary">
+              คุณสามารถส่งหลักฐานการโอนเงิน (สลิป) ให้กับผู้ดูแลระบบผ่านทาง LINE Official เพื่อให้ผู้ดูแลระบบบันทึกเข้าระบบให้คุณ
+            </Paragraph>
+            <Button
+              type="primary"
+              size="large"
+              icon={<UserOutlined />}
+              onClick={() => window.open('https://line.me/ti/p/~@your_admin_oa', '_blank')}
+              style={{ marginTop: 16, backgroundColor: '#06c755', borderColor: '#06c755', fontWeight: 600 }}
+            >
+              ติดต่อผู้ดูแลระบบผ่าน LINE
+            </Button>
+          </div>
+        )}
       </Drawer>
     </AppLayout>
   );
