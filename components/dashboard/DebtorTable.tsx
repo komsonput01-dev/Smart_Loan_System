@@ -427,7 +427,7 @@ export default function DebtorTable({
     {
       title: 'อัตราดอกเบี้ย',
       key: 'rate',
-      width: 150,
+      width: 120,
       align: 'center',
       render: (_, record) => (
         <div style={{ textAlign: 'center' }}>
@@ -443,7 +443,7 @@ export default function DebtorTable({
     {
       title: 'วันครบกำหนด',
       key: 'dueDate',
-      width: 130,
+      width: 110,
       sorter: (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
       render: (_, record) => {
         const date = new Date(record.dueDate);
@@ -473,7 +473,7 @@ export default function DebtorTable({
     {
       title: 'การดำเนินการ',
       key: 'actions',
-      width: 160,
+      width: 130,
       fixed: 'right',
       render: (_, record) => (
         <Space size={6}>
@@ -667,7 +667,7 @@ export default function DebtorTable({
           loading={loading}
           rowKey="id"
           size="middle"
-          scroll={{ x: 900 }}
+          scroll={{ x: 'max-content' }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
