@@ -29,11 +29,27 @@ export async function ensureUser(): Promise<User | null> {
     .where(eq(users.clerkUserId, clerkUserId))
     .limit(1);
 
-  if (existing.length > 0) return existing[0];
-
-  // 2. User not in DB yet — fetch details from Clerk
   const clerkUser = await currentUser();
   if (!clerkUser) return null;
+
+  const roleFromClerk = clerkUser.publicMetadata?.role as 'admin' | 'staff' | 'debtor' | undefined;
+
+  if (existing.length > 0) {
+    const user = existing[0];
+    
+    // Auto-sync role if it was updated in Clerk Dashboard but webhook missed it
+    if (roleFromClerk && roleFromClerk !== user.role) {
+      const [updated] = await db
+        .update(users)
+        .set({ role: roleFromClerk, updatedAt: new Date() })
+        .where(eq(users.clerkUserId, clerkUserId))
+        .returning();
+      console.log(`[ensureUser] 🔄 Synced role for ${user.email} to ${roleFromClerk}`);
+      return updated;
+    }
+    
+    return user;
+  }
 
   const primaryEmail =
     clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
@@ -45,7 +61,6 @@ export async function ensureUser(): Promise<User | null> {
     'Admin';
 
   // 3. Determine role — check Clerk's publicMetadata.role. If not set, default to 'admin'.
-  const roleFromClerk = clerkUser.publicMetadata?.role as 'admin' | 'staff' | 'debtor' | undefined;
   const role: 'admin' | 'staff' | 'debtor' = roleFromClerk ?? 'admin';
 
   // 4. Upsert (safe against race conditions)
