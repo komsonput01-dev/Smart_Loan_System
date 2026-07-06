@@ -68,7 +68,13 @@ export default function AppHeader({
   ];
 
   const fullName = user?.fullName || user?.primaryEmailAddress?.emailAddress?.split('@')[0] || 'ผู้ใช้งาน';
-  const roleLabel = user?.publicMetadata?.role === 'admin' || !user?.publicMetadata?.role ? 'ผู้ดูแลระบบ' : 'ลูกหนี้';
+  
+  let roleLabel = 'ลูกหนี้';
+  if (user?.publicMetadata?.role === 'admin' || !user?.publicMetadata?.role) {
+    roleLabel = 'ผู้ดูแลระบบ';
+  } else if (user?.publicMetadata?.role === 'staff') {
+    roleLabel = 'พนักงาน';
+  }
   const initials = fullName.substring(0, 1).toUpperCase();
 
   return (

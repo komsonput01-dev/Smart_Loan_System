@@ -93,6 +93,7 @@ const avatarColors = [
 export default function DebtorsPage() {
   const { user: clerkUser } = useUser();
   const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+  const isSuperAdmin = clerkUser?.publicMetadata?.role === 'admin' || !clerkUser?.publicMetadata?.role;
 
   const [debtors, setDebtors] = useState<DebtorRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -369,23 +370,25 @@ export default function DebtorsPage() {
                   onClick={() => handleEditClick(r)}
                 />
               </Tooltip>
-              <Tooltip title="ลบลูกหนี้">
-                <Popconfirm
-                  title="ลบลูกหนี้"
-                  description={`คุณต้องการลบลูกหนี้ "${r.fullName}" หรือไม่? (ประวัติสัญญาและประวัติชำระเงินจะยังคงอยู่ในระบบเพื่อความโปร่งใส แต่จะถูกซ่อนออกจากหน้านี้)`}
-                  okText="ลบ"
-                  cancelText="ยกเลิก"
-                  okButtonProps={{ danger: true }}
-                  onConfirm={() => handleDeleteDebtor(r.id, r.fullName)}
-                >
-                  <Button
-                    type="text"
-                    icon={<DeleteOutlined />}
-                    size="small"
-                    danger
-                  />
-                </Popconfirm>
-              </Tooltip>
+              {isSuperAdmin && (
+                <Tooltip title="ลบลูกหนี้">
+                  <Popconfirm
+                    title="ลบลูกหนี้"
+                    description={`คุณต้องการลบลูกหนี้ "${r.fullName}" หรือไม่? (ประวัติสัญญาและประวัติชำระเงินจะยังคงอยู่ในระบบเพื่อความโปร่งใส แต่จะถูกซ่อนออกจากหน้านี้)`}
+                    okText="ลบ"
+                    cancelText="ยกเลิก"
+                    okButtonProps={{ danger: true }}
+                    onConfirm={() => handleDeleteDebtor(r.id, r.fullName)}
+                  >
+                    <Button
+                      type="text"
+                      icon={<DeleteOutlined />}
+                      size="small"
+                      danger
+                    />
+                  </Popconfirm>
+                </Tooltip>
+              )}
             </>
           ) : (
             <Tooltip title="ไม่มีสิทธิ์แก้ไข (เฉพาะผู้ดูแลระบบ)">
