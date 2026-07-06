@@ -283,7 +283,7 @@ function PaymentsContent() {
             <Button
               type="primary"
               icon={<DollarCircleOutlined />}
-              onClick={() => window.open('https://line.me/ti/p/~@your_admin_oa', '_blank')}
+              onClick={() => window.open('https://lin.ee/u8zpIG6', '_blank')}
               style={{ fontWeight: 600, backgroundColor: '#06c755', borderColor: '#06c755' }}
             >
               แจ้งชำระเงินผ่าน LINE
@@ -462,7 +462,7 @@ function PaymentsContent() {
               type="primary"
               size="large"
               icon={<UserOutlined />}
-              onClick={() => window.open('https://line.me/ti/p/~@your_admin_oa', '_blank')}
+              onClick={() => window.open('https://lin.ee/u8zpIG6', '_blank')}
               style={{ marginTop: 16, backgroundColor: '#06c755', borderColor: '#06c755', fontWeight: 600 }}
             >
               ติดต่อผู้ดูแลระบบผ่าน LINE
