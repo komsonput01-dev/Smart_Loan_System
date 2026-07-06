@@ -143,7 +143,7 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
   }
 
   return (
-    <div className="kpi-grid">
+    <div className="kpi-grid" style={{ marginBottom: '16px' }}>
       {cards.map((card) => (
         <Tooltip key={card.key} title={card.fullValue} placement="top">
           <div 
@@ -165,19 +165,25 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
               }
             }}
           >
-            <div className="kpi-card-inner">
+            <div className="kpi-card-inner" style={{ padding: '10px 16px', alignItems: 'center' }}>
               {/* Icon */}
               <div
                 className="kpi-icon-wrap"
-                style={{ background: card.iconBg, color: card.iconColor }}
+                style={{ background: card.iconBg, color: card.iconColor, width: 40, height: 40, fontSize: 20 }}
               >
                 {card.icon}
               </div>
 
               {/* Content */}
-              <div className="kpi-content">
-                <div className="kpi-label">{card.label}</div>
-                <div className="kpi-value" style={{ color: card.iconColor === 'var(--color-primary)' ? 'var(--color-text-primary)' : 'var(--color-text-primary)' }}>
+              <div className="kpi-content" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div className="kpi-label" style={{ marginBottom: 0, fontSize: '12px' }}>{card.label}</div>
+                <div className="kpi-value" style={{ 
+                  color: card.iconColor === 'var(--color-primary)' ? 'var(--color-text-primary)' : 'var(--color-text-primary)',
+                  fontSize: '18px',
+                  fontWeight: 700,
+                  whiteSpace: 'nowrap',
+                  lineHeight: '1.2'
+                }}>
                   {card.value}
                 </div>
                 <div className="kpi-sub">

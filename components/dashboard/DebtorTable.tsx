@@ -567,7 +567,7 @@ export default function DebtorTable({
       {contextHolder}
 
       {/* Section Header */}
-      <div className="section-header">
+      <div className="section-header" style={{ marginTop: 0 }}>
         <div>
           <h2 className="section-title">
             {isStaffOrAdmin ? 'รายการลูกหนี้ทั้งหมด' : 'รายการสัญญาเงินกู้ของฉัน'}

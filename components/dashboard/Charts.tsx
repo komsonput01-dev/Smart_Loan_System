@@ -51,15 +51,15 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
   };
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '24px' }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '24px', marginBottom: '16px' }}>
       
       {/* Donut Chart */}
       <Card
         style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #f0f0f0' }}
-        bodyStyle={{ padding: '20px 24px' }}
+        bodyStyle={{ padding: '16px' }}
       >
-        <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600 }}>สัดส่วนสถานะลูกหนี้</Title>
-        <div style={{ height: 210, width: '100%' }}>
+        <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600, fontSize: 14 }}>สัดส่วนสถานะลูกหนี้</Title>
+        <div style={{ height: 150, width: '100%' }}>
           {data.loanStatus.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -67,8 +67,8 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
                   data={data.loanStatus}
                   cx="40%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={85}
+                  innerRadius={45}
+                  outerRadius={65}
                   paddingAngle={2}
                   dataKey="value"
                 >
@@ -94,19 +94,18 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
       {/* Bar Chart */}
       <Card
         style={{ borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)', border: '1px solid #f0f0f0' }}
-        bodyStyle={{ padding: '20px 24px' }}
+        bodyStyle={{ padding: '16px' }}
       >
-        <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600 }}>อายุหนี้ค้างชำระ (Debt Aging)</Title>
-        <div style={{ height: 210, width: '100%' }}>
+        <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600, fontSize: 14 }}>อายุหนี้ค้างชำระ (Debt Aging)</Title>
+        <div style={{ height: 150, width: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data.debtAging}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
-              barSize={40}
+              barSize={30}
             >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-              <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13 }} dy={10} />
-              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 13 }} tickFormatter={formatYAxis} width={60} />
+              <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 11 }} tickFormatter={formatYAxis} width={50} />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f8fafc' }} />
               <Bar dataKey="amount" fill="#3b82f6" radius={[4, 4, 0, 0]}>
                 {data.debtAging.map((entry, index) => {
