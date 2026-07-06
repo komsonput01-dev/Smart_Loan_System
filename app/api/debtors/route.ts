@@ -37,8 +37,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (currentUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    if (currentUser.role !== 'admin' && currentUser.role !== 'staff') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     // Fetch all debtors with loan aggregates
@@ -57,9 +57,9 @@ export async function GET() {
         isActive: users.isActive,
         createdAt: users.createdAt,
         // Loan aggregates
-        totalLoans: sql<number>`COUNT(${loans.id})`,
-        totalPrincipal: sql<string>`COALESCE(SUM(${loans.principal}), '0')`,
-        totalOutstanding: sql<string>`COALESCE(SUM(${loans.outstandingPrincipal}), '0')`,
+        totalLoans: sql<number>`COUNT(CASE WHEN ${loans.status} != 'draft' THEN ${loans.id} ELSE NULL END)`,
+        totalPrincipal: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.principal} ELSE 0 END), '0')`,
+        totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.outstandingPrincipal} ELSE 0 END), '0')`,
         hasOverdue: sql<boolean>`BOOL_OR(${loans.status} = 'overdue')`,
         hasUpcoming: sql<boolean>`BOOL_OR(${loans.status} = 'upcoming')`,
       })

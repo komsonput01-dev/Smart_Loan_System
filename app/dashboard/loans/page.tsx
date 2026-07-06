@@ -51,7 +51,7 @@ interface LoanRow {
   interestType: 'flat_daily' | 'flat_monthly' | 'effective_daily' | 'effective_monthly';
   startDate: string;
   dueDate: string;
-  status: 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl';
+  status: 'draft' | 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl';
   note: string | null;
   userName: string | null;
   userPhone: string | null;
@@ -76,6 +76,7 @@ const statusConfig: Record<
   string,
   { label: string; color: string }
 > = {
+  draft: { label: 'ร่างสัญญา', color: 'default' },
   active: { label: 'ปกติ', color: 'success' },
   upcoming: { label: 'ใกล้กำหนด', color: 'warning' },
   overdue: { label: 'เกินกำหนด', color: 'error' },
@@ -85,7 +86,10 @@ const statusConfig: Record<
 
 export default function LoansPage() {
   const { user: clerkUser } = useUser();
-  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+  const role = clerkUser?.publicMetadata?.role || 'debtor';
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff';
+  const isStaffOrAdmin = role === 'admin' || role === 'staff';
 
   const router = useRouter();
   const [loans, setLoans] = useState<LoanRow[]>([]);
@@ -279,7 +283,7 @@ export default function LoansPage() {
               onClick={() => router.push(`/dashboard/loans/${r.id}`)}
             />
           </Tooltip>
-          {r.status !== 'closed' && (
+          {r.status !== 'closed' && r.status !== 'draft' && isAdmin && (
             <Tooltip title="บันทึกการชำระเงิน">
               <Button
                 type="text"
@@ -295,7 +299,7 @@ export default function LoansPage() {
     },
   ];
 
-  if (!isAdmin) {
+  if (!isStaffOrAdmin) {
     return (
       <AppLayout pageTitle="สัญญาเงินกู้">
         <div style={{ textAlign: 'center', padding: '80px 16px' }}>
@@ -353,6 +357,7 @@ export default function LoansPage() {
           style={{ minWidth: 150 }}
           options={[
             { value: 'all', label: 'สถานะทั้งหมด' },
+            { value: 'draft', label: '📝 ร่างสัญญา (Draft)' },
             { value: 'active', label: '🟢 ปกติ (Active)' },
             { value: 'upcoming', label: '🟡 ใกล้กำหนด (Upcoming)' },
             { value: 'overdue', label: '🔴 เกินกำหนด (Overdue)' },
@@ -414,18 +419,25 @@ export default function LoansPage() {
         onClose={() => { setDrawerOpen(false); form.resetFields(); }}
         width={520}
         footer={
-          <div style={{ textAlign: 'right', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-            <Button onClick={() => { setDrawerOpen(false); form.resetFields(); }}>
-              ยกเลิก
-            </Button>
-            <Button
-              type="primary"
-              loading={saving}
-              icon={<PlusOutlined />}
-              onClick={() => form.submit()}
-            >
-              สร้างสัญญาเงินกู้
-            </Button>
+          <div style={{ padding: '8px 4px' }}>
+            {isStaff && (
+              <div style={{ textAlign: 'left', marginBottom: 12, color: '#b45309', fontSize: 12, fontWeight: 500 }}>
+                * หมายเหตุ: สัญญาจะถูกบันทึกในสถานะ "ร่างสัญญา (Draft)" เพื่อรอผู้ดูแลระบบอนุมัติ
+              </div>
+            )}
+            <div style={{ textAlign: 'right', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <Button onClick={() => { setDrawerOpen(false); form.resetFields(); }}>
+                ยกเลิก
+              </Button>
+              <Button
+                type="primary"
+                loading={saving}
+                icon={<PlusOutlined />}
+                onClick={() => form.submit()}
+              >
+                {isStaff ? 'บันทึกร่างสัญญา' : 'สร้างสัญญาเงินกู้'}
+              </Button>
+            </div>
           </div>
         }
       >

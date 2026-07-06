@@ -24,21 +24,28 @@ export async function GET() {
     // ── 1. KPI aggregates (Inner join to only include active users) ────────────
     const kpiQuery = db
       .select({
-        totalPrincipal: sql<string>`COALESCE(SUM(${loans.principal}), '0')`,
-        totalOutstanding: sql<string>`COALESCE(SUM(${loans.outstandingPrincipal}), '0')`,
-        totalInterestCollected: sql<string>`COALESCE(SUM(${loans.totalInterestCollected}), '0')`,
-        totalLoans: sql<number>`COUNT(${loans.id})`,
+        totalPrincipal: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.principal} ELSE 0 END), '0')`,
+        totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.outstandingPrincipal} ELSE 0 END), '0')`,
+        totalInterestCollected: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.totalInterestCollected} ELSE 0 END), '0')`,
+        totalLoans: sql<number>`COUNT(CASE WHEN ${loans.status} != 'draft' THEN ${loans.id} ELSE NULL END)`,
         activeCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'active')`,
         upcomingCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'upcoming')`,
         overdueCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'overdue')`,
         nplCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'npl')`,
         closedCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'closed')`,
+        draftCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'draft')`,
       })
       .from(loans)
       .innerJoin(users, eq(loans.userId, users.id));
 
     if (isDebtor) {
-      kpiQuery.where(and(eq(loans.userId, currentUser.id), eq(users.isActive, true)));
+      kpiQuery.where(
+        and(
+          eq(loans.userId, currentUser.id),
+          eq(users.isActive, true),
+          sql`${loans.status} != 'draft'`
+        )
+      );
     } else {
       kpiQuery.where(eq(users.isActive, true));
     }
@@ -72,7 +79,13 @@ export async function GET() {
       .innerJoin(users, eq(loans.userId, users.id)); // Use innerJoin to hide loans of soft-deleted debtors
 
     if (isDebtor) {
-      debtorsQuery.where(and(eq(loans.userId, currentUser.id), eq(users.isActive, true)));
+      debtorsQuery.where(
+        and(
+          eq(loans.userId, currentUser.id),
+          eq(users.isActive, true),
+          sql`${loans.status} != 'draft'`
+        )
+      );
     } else {
       debtorsQuery.where(eq(users.isActive, true));
     }

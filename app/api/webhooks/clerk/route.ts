@@ -35,7 +35,7 @@ interface ClerkWebhookUserData {
   primary_email_address_id: string;
   image_url: string | null;
   public_metadata: {
-    role?: 'admin' | 'debtor';
+    role?: 'admin' | 'staff' | 'debtor';
     lineUserId?: string;
     phone?: string;
   };

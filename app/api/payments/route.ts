@@ -77,7 +77,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ payments: paymentHistory });
     } else {
       // Fetch all payments in the system (for global list)
-      const paymentHistory = await db
+      const baseQuery = db
         .select({
           id: payments.id,
           loanId: payments.loanId,
@@ -98,8 +98,13 @@ export async function GET(req: Request) {
         })
         .from(payments)
         .leftJoin(loans, eq(payments.loanId, loans.id))
-        .leftJoin(users, eq(loans.userId, users.id))
-        .orderBy(desc(payments.paymentDate), desc(payments.createdAt));
+        .leftJoin(users, eq(loans.userId, users.id));
+
+      if (currentUser.role === 'debtor') {
+        baseQuery.where(eq(loans.userId, currentUser.id));
+      }
+
+      const paymentHistory = await baseQuery.orderBy(desc(payments.paymentDate), desc(payments.createdAt));
 
       return NextResponse.json({ payments: paymentHistory });
     }

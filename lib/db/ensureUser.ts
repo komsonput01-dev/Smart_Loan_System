@@ -45,8 +45,8 @@ export async function ensureUser(): Promise<User | null> {
     'Admin';
 
   // 3. Determine role — check Clerk's publicMetadata.role. If not set, default to 'admin'.
-  const roleFromClerk = clerkUser.publicMetadata?.role as 'admin' | 'debtor' | undefined;
-  const role: 'admin' | 'debtor' = roleFromClerk ?? 'admin';
+  const roleFromClerk = clerkUser.publicMetadata?.role as 'admin' | 'staff' | 'debtor' | undefined;
+  const role: 'admin' | 'staff' | 'debtor' = roleFromClerk ?? 'admin';
 
   // 4. Upsert (safe against race conditions)
   const [created] = await db

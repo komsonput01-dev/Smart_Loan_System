@@ -22,7 +22,7 @@ import { relations, sql } from 'drizzle-orm';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
-export const userRoleEnum = pgEnum('user_role', ['admin', 'debtor']);
+export const userRoleEnum = pgEnum('user_role', ['admin', 'staff', 'debtor']);
 
 export const interestTypeEnum = pgEnum('interest_type', [
   'flat_daily',       // คงที่/วัน — คิดจากเงินต้นก้อนแรก รายวัน
@@ -32,6 +32,7 @@ export const interestTypeEnum = pgEnum('interest_type', [
 ]);
 
 export const loanStatusEnum = pgEnum('loan_status', [
+  'draft',     // 📝 ร่างสัญญา (Staff สร้าง รอ Admin อนุมัติ)
   'active',    // 🟢 ปกติ
   'upcoming',  // 🟡 ใกล้กำหนดชำระ (1–3 วัน)
   'overdue',   // 🔴 เกินกำหนดชำระ
@@ -120,6 +121,9 @@ export const loans = pgTable(
     idCardImageUrl: text('id_card_image_url'),
     landDeedImageUrl: text('land_deed_image_url'),
     contractDocUrl: text('contract_doc_url'),
+
+    createdBy: uuid('created_by').references(() => users.id, { onDelete: 'restrict' }),
+    approvedBy: uuid('approved_by').references(() => users.id, { onDelete: 'restrict' }),
 
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().default(sql`now()`),
     updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
@@ -251,6 +255,8 @@ export const lineNotifications = pgTable(
 export const usersRelations = relations(users, ({ many }) => ({
   loans: many(loans),
   recordedPayments: many(payments, { relationName: 'recordedBy' }),
+  createdLoans: many(loans, { relationName: 'createdBy' }),
+  approvedLoans: many(loans, { relationName: 'approvedBy' }),
 }));
 
 export const loansRelations = relations(loans, ({ one, many }) => ({
@@ -259,6 +265,8 @@ export const loansRelations = relations(loans, ({ one, many }) => ({
   documents: many(documents),
   notificationLogs: many(notificationLogs),
   lineNotifications: many(lineNotifications),
+  creator: one(users, { fields: [loans.createdBy], references: [users.id], relationName: 'createdBy' }),
+  approver: one(users, { fields: [loans.approvedBy], references: [users.id], relationName: 'approvedBy' }),
 }));
 
 export const paymentsRelations = relations(payments, ({ one }) => ({

@@ -47,8 +47,14 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get('limit') ?? '20');
     const offset = (page - 1) * limit;
 
+    const isDebtor = currentUser.role === 'debtor';
+
     // Build where conditions
     const conditions = [];
+    if (isDebtor) {
+      conditions.push(eq(loans.userId, currentUser.id));
+      conditions.push(sql`${loans.status} != 'draft'`);
+    }
     if (status && status !== 'all') {
       conditions.push(eq(loans.status, status as any));
     }
@@ -87,18 +93,24 @@ export async function GET(req: Request) {
       .offset(offset);
 
     // Get KPI summary
-    const kpiData = await db
+    const kpiQuery = db
       .select({
-        totalPrincipal: sql<string>`COALESCE(SUM(${loans.principal}), 0)`,
-        totalOutstanding: sql<string>`COALESCE(SUM(${loans.outstandingPrincipal}), 0)`,
-        totalInterestCollected: sql<string>`COALESCE(SUM(${loans.totalInterestCollected}), 0)`,
-        totalLoans: sql<number>`COUNT(*)`,
+        totalPrincipal: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.principal} ELSE 0 END), 0)`,
+        totalOutstanding: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.outstandingPrincipal} ELSE 0 END), 0)`,
+        totalInterestCollected: sql<string>`COALESCE(SUM(CASE WHEN ${loans.status} != 'draft' THEN ${loans.totalInterestCollected} ELSE 0 END), 0)`,
+        totalLoans: sql<number>`COUNT(CASE WHEN ${loans.status} != 'draft' THEN ${loans.id} ELSE NULL END)`,
         activeCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'active')`,
         upcomingCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'upcoming')`,
         overdueCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'overdue')`,
         nplCount: sql<number>`COUNT(*) FILTER (WHERE ${loans.status} = 'npl')`,
       })
       .from(loans);
+
+    if (isDebtor) {
+      kpiQuery.where(eq(loans.userId, currentUser.id));
+    }
+
+    const kpiData = await kpiQuery;
 
     return NextResponse.json({
       loans: loansData,
@@ -124,9 +136,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify admin role
-    if (currentUser.role !== 'admin') {
-      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+    // Verify admin or staff role
+    if (currentUser.role !== 'admin' && currentUser.role !== 'staff') {
+      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
     }
 
     const body = await req.json();
@@ -151,6 +163,11 @@ export async function POST(req: Request) {
       );
     }
 
+    // Determine status & approval metadata based on role
+    const isStaff = currentUser.role === 'staff';
+    const status = isStaff ? 'draft' : 'active';
+    const approvedBy = isStaff ? null : currentUser.id;
+
     // Create loan — principal == outstandingPrincipal on creation
     const [newLoan] = await db
       .insert(loans)
@@ -165,11 +182,13 @@ export async function POST(req: Request) {
         startDate: data.startDate,
         dueDate: data.dueDate,
         lastInterestCalcDate: data.startDate,
-        status: 'active',
+        status: status as any,
         note: data.note,
         bankAccountName: data.bankAccountName,
         bankAccountNumber: data.bankAccountNumber,
         bankName: data.bankName,
+        createdBy: currentUser.id,
+        approvedBy: approvedBy,
       })
       .returning();
 

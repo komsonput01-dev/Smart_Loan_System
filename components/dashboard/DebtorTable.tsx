@@ -221,7 +221,10 @@ export default function DebtorTable({
   const [exportLoading, setExportLoading] = useState(false);
   const [hideClosed, setHideClosed] = useState(false);
   const { user: clerkUser } = useUser();
-  const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
+  const role = clerkUser?.publicMetadata?.role || 'debtor';
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff';
+  const isStaffOrAdmin = role === 'admin' || role === 'staff';
 
   const handleExportExcel = async () => {
     setExportLoading(true);
@@ -463,7 +466,7 @@ export default function DebtorTable({
               }}
             />
           </Tooltip>
-          {isAdmin && (
+          {isStaffOrAdmin && (
             <>
               <Tooltip title="แจ้งเตือน LINE">
                 <Button
@@ -477,15 +480,27 @@ export default function DebtorTable({
                   }}
                 />
               </Tooltip>
-              <Tooltip title="บันทึกการชำระ">
-                <Button
-                  type="primary"
-                  icon={<DollarCircleOutlined />}
-                  size="small"
-                  onClick={() => onPayment?.(record.id)}
-                  style={{ borderRadius: 'var(--radius-md)' }}
-                />
-              </Tooltip>
+              {isAdmin ? (
+                <Tooltip title="บันทึกการชำระ">
+                  <Button
+                    type="primary"
+                    icon={<DollarCircleOutlined />}
+                    size="small"
+                    onClick={() => onPayment?.(record.id)}
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                  />
+                </Tooltip>
+              ) : (
+                <Tooltip title="สิทธิ์พนักงาน: เฉพาะผู้ดูแลระบบเท่านั้นที่จะบันทึกการชำระเงินได้">
+                  <Button
+                    type="primary"
+                    icon={<DollarCircleOutlined />}
+                    size="small"
+                    disabled
+                    style={{ borderRadius: 'var(--radius-md)' }}
+                  />
+                </Tooltip>
+              )}
             </>
           )}
         </Space>
@@ -513,13 +528,13 @@ export default function DebtorTable({
       <div className="section-header">
         <div>
           <h2 className="section-title">
-            {isAdmin ? 'รายการลูกหนี้ทั้งหมด' : 'รายการสัญญาเงินกู้ของฉัน'}
+            {isStaffOrAdmin ? 'รายการลูกหนี้ทั้งหมด' : 'รายการสัญญาเงินกู้ของฉัน'}
           </h2>
           <p className="section-subtitle">
             แสดง {filtered.length} จาก {data.length} รายการ
           </p>
         </div>
-        {isAdmin && (
+        {isStaffOrAdmin && (
           <div
             style={{ display: 'flex', gap: 'var(--space-3)', alignItems: 'center', flexWrap: 'wrap' }}
           >

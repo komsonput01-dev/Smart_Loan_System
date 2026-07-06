@@ -53,41 +53,41 @@ export function calculateAccruedInterest({
   switch (interestType) {
     // ── Flat Rate (คงที่) — คิดจากเงินต้นก้อนแรกเสมอ ────────────────────────
     case 'flat_daily': {
-      // ดอกเบี้ย = เงินต้นเดิม × (rate / 365) × จำนวนวัน
+      // rate คือ ดอกเบี้ยต่อวัน
+      // ดอกเบี้ย = เงินต้นเดิม × rate × จำนวนวัน
       return originalPrincipal
         .mul(rate)
-        .div(365)
         .mul(days)
         .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
     }
 
     case 'flat_monthly': {
-      // ดอกเบี้ย = เงินต้นเดิม × (rate / 12) × จำนวนเดือนจริงตามปฏิทิน (Calendar Months)
-      const months = new Decimal(dayjs(toDate).diff(dayjs(fromDate), 'month', true));
+      // rate คือ ดอกเบี้ยต่อเดือน
+      // คิดเป็นรายวัน = rate * 12 / 365 (คิดแบบ prorate ตามจำนวนวันจริง)
+      const dailyRate = rate.mul(12).div(365);
       return originalPrincipal
-        .mul(rate)
-        .div(12)
-        .mul(months)
+        .mul(dailyRate)
+        .mul(days)
         .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
     }
 
     // ── Effective Rate (ลดต้นลดดอก) — คิดจากเงินต้นคงเหลือ ─────────────────
     case 'effective_daily': {
-      // ดอกเบี้ย = เงินต้นคงเหลือ × (rate / 365) × จำนวนวัน
+      // rate คือ ดอกเบี้ยต่อวัน
+      // ดอกเบี้ย = เงินต้นคงเหลือ × rate × จำนวนวัน
       return outstandingPrincipal
         .mul(rate)
-        .div(365)
         .mul(days)
         .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
     }
 
     case 'effective_monthly': {
-      // ดอกเบี้ย = เงินต้นคงเหลือ × (rate / 12) × จำนวนเดือนจริงตามปฏิทิน (Calendar Months)
-      const months = new Decimal(dayjs(toDate).diff(dayjs(fromDate), 'month', true));
+      // rate คือ ดอกเบี้ยต่อเดือน
+      // คิดเป็นรายวัน = rate * 12 / 365
+      const dailyRate = rate.mul(12).div(365);
       return outstandingPrincipal
-        .mul(rate)
-        .div(12)
-        .mul(months)
+        .mul(dailyRate)
+        .mul(days)
         .toDecimalPlaces(2, Decimal.ROUND_HALF_UP);
     }
 

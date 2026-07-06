@@ -40,6 +40,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -56,12 +57,14 @@ interface LoanDetail {
   startDate: string;
   dueDate: string;
   lastInterestCalcDate: string | null;
-  status: 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl';
+  status: 'draft' | 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl';
   note: string | null;
   bankAccountName: string | null;
   bankAccountNumber: string | null;
   bankName: string | null;
   createdAt: string;
+  creatorName?: string | null;
+  approverName?: string | null;
 }
 
 interface UserDetail {
@@ -105,6 +108,7 @@ const statusConfig: Record<
   string,
   { label: string; color: string; badge: 'success' | 'warning' | 'error' | 'default' | 'processing' }
 > = {
+  draft: { label: 'ร่างสัญญา', color: '#8c8c8c', badge: 'processing' },
   active: { label: 'ปกติ', color: 'var(--color-success)', badge: 'success' },
   upcoming: { label: 'ใกล้กำหนด', color: 'var(--color-warning)', badge: 'warning' },
   overdue: { label: 'เกินกำหนด', color: 'var(--color-danger)', badge: 'error' },
@@ -113,6 +117,12 @@ const statusConfig: Record<
 };
 
 function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> }) {
+  const { user: clerkUser } = useUser();
+  const role = clerkUser?.publicMetadata?.role || 'debtor';
+  const isAdmin = role === 'admin';
+  const isStaff = role === 'staff';
+  const isStaffOrAdmin = role === 'admin' || role === 'staff';
+
   const router = useRouter();
   const { id } = React.use(params);
 
@@ -344,6 +354,25 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
     }
   };
 
+  const handleApproveLoan = async () => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/loans/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'active' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'อนุมัติสัญญาไม่สำเร็จ');
+      messageApi.success('อนุมัติสัญญาเงินกู้เรียบร้อยแล้ว');
+      fetchLoanData();
+    } catch (err: unknown) {
+      messageApi.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const paymentColumns: ColumnsType<PaymentRow> = [
     {
       title: 'วันที่ชำระ',
@@ -464,7 +493,18 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
           }}>
             แก้ไขสัญญา
           </Button>
-          {loan.status !== 'closed' && (
+          {loan.status === 'draft' && isAdmin && (
+            <Button
+              type="primary"
+              icon={<FileProtectOutlined />}
+              onClick={handleApproveLoan}
+              loading={submitting}
+              style={{ backgroundColor: 'var(--color-success)', borderColor: 'var(--color-success)' }}
+            >
+              อนุมัติสัญญาเงินกู้
+            </Button>
+          )}
+          {loan.status !== 'closed' && loan.status !== 'draft' && isAdmin && (
             <Button type="primary" icon={<DollarCircleOutlined />} onClick={() => {
               paymentForm.setFieldsValue({
                 paymentDate: dayjs(),
@@ -477,6 +517,22 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
           )}
         </Space>
       </div>
+
+      {loan.status === 'draft' && (
+        <div style={{
+          background: '#fffbe6',
+          border: '1px solid #ffe58f',
+          padding: '12px 16px',
+          borderRadius: 'var(--radius-md)',
+          marginBottom: 16,
+          color: '#d46b08',
+          fontWeight: 500,
+          fontSize: 13,
+        }}>
+          ⚠️ สัญญานี้อยู่ในสถานะ "ร่างสัญญา (Draft)" และยังไม่มีผลบังคับใช้
+          {isStaff ? ' — รอผู้ดูแลระบบ (Admin) ตรวจสอบและอนุมัติสัญญา' : ' — กรุณาตรวจสอบรายละเอียดและกดปุ่ม "อนุมัติสัญญาเงินกู้" ด้านบน'}
+        </div>
+      )}
 
       <Row gutter={[16, 16]}>
         {/* Left Side: Client and Loan Overview */}
@@ -550,7 +606,13 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
                 <Descriptions.Item label="วันที่คิดดอกเบี้ยล่าสุด">
                   {loan.lastInterestCalcDate ? new Date(loan.lastInterestCalcDate).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}
                 </Descriptions.Item>
-                <Descriptions.Item label="หมายเหตุ">
+                <Descriptions.Item label="ผู้สร้างร่างสัญญา">
+                  {loan.creatorName || '—'}
+                </Descriptions.Item>
+                <Descriptions.Item label="ผู้อนุมัติสัญญา">
+                  {loan.approverName || (loan.status === 'draft' ? <Tag color="warning">รออนุมัติ</Tag> : '—')}
+                </Descriptions.Item>
+                <Descriptions.Item label="หมายเหตุ" span={2}>
                   {loan.note || '—'}
                 </Descriptions.Item>
               </Descriptions>
@@ -773,7 +835,7 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
             label="วันครบกำหนดชำระ"
             rules={[{ required: true, message: 'กรุณาเลือกวันที่ครบกำหนด' }]}
           >
-            <DatePicker style={{ width: '100%' }} size="large" />
+            <DatePicker style={{ width: '100%' }} size="large" disabled={isStaff} />
           </Form.Item>
 
           <Form.Item
@@ -781,7 +843,8 @@ function LoanDetailContent({ params }: { params: React.Usable<{ id: string }> })
             label="สถานะสัญญา"
             rules={[{ required: true }]}
           >
-            <Select style={{ width: '100%' }} size="large" options={[
+            <Select style={{ width: '100%' }} size="large" disabled={isStaff} options={[
+              { value: 'draft', label: '📝 ร่างสัญญา (Draft)' },
               { value: 'active', label: '🟢 ปกติ (Active)' },
               { value: 'upcoming', label: '🟡 ใกล้ครบกำหนด (Upcoming)' },
               { value: 'overdue', label: '🔴 เกินกำหนด (Overdue)' },
