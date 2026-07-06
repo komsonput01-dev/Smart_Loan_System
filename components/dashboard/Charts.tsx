@@ -77,7 +77,7 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number) => [`${value} รายการ`, 'จำนวน']}
+                  formatter={(value: any) => [`${value} รายการ`, 'จำนวน']}
                   contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Legend verticalAlign="bottom" height={36} iconType="circle" />
