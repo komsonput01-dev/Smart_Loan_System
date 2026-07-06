@@ -112,7 +112,7 @@ export default function DashboardPage() {
   };
 
   const handlePayment = (id: string) => {
-    router.push(`/dashboard/payments?loanId=${id}`);
+    router.push(`/dashboard/payments?loanId=${id}&action=new`);
   };
 
   const handleCardClick = (status: string) => {

@@ -107,10 +107,20 @@ function PaymentsContent() {
   }, [fetchPayments]);
 
   useEffect(() => {
+    // Auto open drawer if action=new in URL
+    if (searchParams.get('action') === 'new' && !drawerOpen) {
+      setDrawerOpen(true);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
     if (drawerOpen) {
       fetchLoans();
+      if (preselectedLoanId) {
+        form.setFieldsValue({ loanId: preselectedLoanId });
+      }
     }
-  }, [drawerOpen, fetchLoans]);
+  }, [drawerOpen, fetchLoans, preselectedLoanId, form]);
 
   const handleRecordPayment = async (values: any) => {
     setSaving(true);
@@ -188,11 +198,19 @@ function PaymentsContent() {
       render: (v) => <span className="font-tabular" style={{ color: 'var(--color-success)', fontWeight: 700 }}>{fmt(v)}</span>,
     },
     {
-      title: 'ตัดชำระดอกเบี้ย',
+      title: 'ตัดชำระดอกเบี้ยปรับ',
+      dataIndex: 'penaltyPortion',
+      key: 'penaltyPortion',
+      align: 'right',
+      width: 140,
+      render: (v) => <span className="font-tabular" style={{ color: '#dc2626', fontSize: 13 }}>{v && Number(v) > 0 ? fmt(v) : '฿0.00'}</span>,
+    },
+    {
+      title: 'ตัดชำระดอกเบี้ยปกติ',
       dataIndex: 'interestPortion',
       key: 'interestPortion',
       align: 'right',
-      width: 130,
+      width: 140,
       render: (v) => <span className="font-tabular" style={{ color: '#d97706', fontSize: 13 }}>{fmt(v)}</span>,
     },
     {
@@ -349,10 +367,12 @@ function PaymentsContent() {
             rules={[{ required: true, message: 'กรุณาเลือกสัญญาเงินกู้' }]}
           >
             <Select
-              placeholder="ค้นหาชื่อผู้กู้ หรือรหัสสัญญา..."
               showSearch
+              placeholder="ค้นหาชื่อผู้กู้ หรือรหัสสัญญา..."
+              optionFilterProp="children"
+              disabled={!!preselectedLoanId}
               filterOption={(input, option) =>
-                (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
               }
               options={loans
                 .filter((l) => Number(l.outstandingPrincipal) > 0)
