@@ -271,27 +271,7 @@ export default function DebtorsPage() {
         );
       },
     },
-    {
-      title: 'เบอร์โทร',
-      key: 'phone',
-      width: 155,
-      render: (_, r) => (
-        <Space size={4} align="center">
-          <Text style={{ fontSize: 13 }}>
-            {r.phone ? (revealedPhones.has(r.id) ? r.phone : maskPhone(r.phone)) : <span style={{ color: 'var(--color-text-muted)' }}>—</span>}
-          </Text>
-          {r.phone && (
-            <Button
-              type="text"
-              size="small"
-              icon={revealedPhones.has(r.id) ? <EyeInvisibleOutlined style={{ fontSize: 11 }} /> : <EyeOutlined style={{ fontSize: 11 }} />}
-              onClick={(e) => { e.stopPropagation(); togglePhoneReveal(r.id); }}
-              style={{ padding: 0, width: 16, height: 16, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-            />
-          )}
-        </Space>
-      ),
-    },
+
     {
       title: 'สถานะ',
       key: 'status',
