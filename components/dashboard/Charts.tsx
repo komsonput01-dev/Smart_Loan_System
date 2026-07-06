@@ -59,16 +59,16 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
         bodyStyle={{ padding: '20px 24px' }}
       >
         <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600 }}>สัดส่วนสถานะลูกหนี้</Title>
-        <div style={{ height: 300, width: '100%' }}>
+        <div style={{ height: 210, width: '100%' }}>
           {data.loanStatus.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
                   data={data.loanStatus}
-                  cx="50%"
+                  cx="40%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
+                  innerRadius={60}
+                  outerRadius={85}
                   paddingAngle={2}
                   dataKey="value"
                 >
@@ -80,7 +80,7 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
                   formatter={(value: any) => [`${value} รายการ`, 'จำนวน']}
                   contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                <Legend layout="vertical" verticalAlign="middle" align="right" iconType="circle" />
               </PieChart>
             </ResponsiveContainer>
           ) : (
@@ -97,7 +97,7 @@ export default function DashboardCharts({ data }: { data?: ChartsData }) {
         bodyStyle={{ padding: '20px 24px' }}
       >
         <Title level={5} style={{ marginTop: 0, color: '#1e293b', fontWeight: 600 }}>อายุหนี้ค้างชำระ (Debt Aging)</Title>
-        <div style={{ height: 300, width: '100%' }}>
+        <div style={{ height: 210, width: '100%' }}>
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data.debtAging}
