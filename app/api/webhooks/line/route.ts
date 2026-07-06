@@ -74,6 +74,18 @@ export async function POST(req: Request) {
 
         if (!lineUserId || !replyToken) continue;
 
+        // Check if this lineUserId is already linked to an active user
+        const alreadyLinked = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.lineUserId, lineUserId))
+          .limit(1);
+
+        if (alreadyLinked.length > 0) {
+          // User is already linked. Ignore text messages so Admin can reply manually in LINE OA.
+          continue;
+        }
+
         // Try to match email or phone number in database
         const isEmail = inputText.includes('@');
         const searchTerm = isEmail ? inputText.toLowerCase() : inputText.replace(/-/g, '');
