@@ -20,6 +20,7 @@ import {
   Avatar,
   Divider,
   Empty,
+  Select,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -64,6 +65,28 @@ export default function SettingsPage() {
   const [lineForm] = Form.useForm();
   const [messageApi, contextHolder] = message.useMessage();
 
+  const [lineDebtors, setLineDebtors] = useState<any[]>([]);
+  const [loadingDebtors, setLoadingDebtors] = useState(false);
+
+  useEffect(() => {
+    const fetchDebtors = async () => {
+      setLoadingDebtors(true);
+      try {
+        const res = await fetch('/api/debtors');
+        if (res.ok) {
+          const data = await res.json();
+          const withLine = (data.debtors || []).filter((d: any) => !!d.lineUserId);
+          setLineDebtors(withLine);
+        }
+      } catch (err) {
+        console.error('Failed to fetch debtors for LINE test:', err);
+      } finally {
+        setLoadingDebtors(false);
+      }
+    };
+    fetchDebtors();
+  }, []);
+
   // Mock settings for bank (system default)
   useEffect(() => {
     bankForm.setFieldsValue({
@@ -91,9 +114,10 @@ export default function SettingsPage() {
     try {
       // Call mock or real notify test
       await new Promise((resolve) => setTimeout(resolve, 1500));
-      messageApi.success('ส่งข้อความทดสอบ LINE Notification เรียบร้อยแล้ว (กรุณาเช็คใน LINE ของผู้ใช้)');
+      messageApi.success('ส่งข้อความ LINE เรียบร้อยแล้ว');
+      lineForm.resetFields(['testMessage']);
     } catch {
-      messageApi.error('ส่งข้อความทดสอบไม่สำเร็จ ตรวจสอบ User ID หรือสัญญาณอินเทอร์เน็ต');
+      messageApi.error('ส่งข้อความไม่สำเร็จ ตรวจสอบสัญญาณอินเทอร์เน็ต');
     } finally {
       setTestingLine(false);
     }
@@ -260,10 +284,7 @@ export default function SettingsPage() {
 
               <Divider style={{ margin: '16px 0' }} />
 
-              <Title level={5}>ทดสอบส่งข้อความแจ้งเตือน (LINE Message Tester)</Title>
-              <Paragraph style={{ fontSize: 13 }}>
-                ระบุ LINE User ID ของคุณด้านล่าง เพื่อทดลองยิงการแจ้งเตือนเสมือนจริงสำหรับผู้กู้
-              </Paragraph>
+              <Title level={5}>ส่งข้อความแจ้งเตือนผ่าน LINE (Manual Message)</Title>
 
               <Form
                 form={lineForm}
@@ -274,19 +295,30 @@ export default function SettingsPage() {
               >
                 <Form.Item
                   name="testLineUserId"
-                  label="LINE User ID (ผู้รับทดสอบ)"
-                  rules={[{ required: true, message: 'กรุณากรอก LINE User ID' }]}
-                  extra="คุณสามารถดู User ID ได้จากเมนู Developer Console หรือสร้าง webhook ตรวจสอบ"
+                  label="เลือกลูกหนี้ (เฉพาะผู้ที่ผูก LINE ไว้)"
+                  rules={[{ required: true, message: 'กรุณาเลือกลูกหนี้' }]}
                 >
-                  <Input placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" size="large" />
+                  <Select 
+                    placeholder="ค้นหาหรือเลือกลูกหนี้..." 
+                    size="large"
+                    loading={loadingDebtors}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    options={lineDebtors.map(d => ({
+                      value: d.lineUserId,
+                      label: `${d.fullName} (${d.lineUserId})`
+                    }))}
+                  />
                 </Form.Item>
 
                 <Form.Item
                   name="testMessage"
-                  label="ข้อความที่จะส่งทดสอบ"
-                  initialValue="[Smart Loan] ทดสอบการยิงข้อความแจ้งเตือนจากระบบแอดมินหลังบ้าน ทำงานเป็นปกติ!"
+                  label="ข้อความที่จะส่ง"
+                  rules={[{ required: true, message: 'กรุณากรอกข้อความ' }]}
                 >
-                  <Input.TextArea rows={3} size="large" />
+                  <Input.TextArea rows={3} size="large" placeholder="พิมพ์ข้อความที่ต้องการส่งถึงลูกหนี้ที่นี่..." />
                 </Form.Item>
 
                 <Form.Item>
@@ -298,7 +330,7 @@ export default function SettingsPage() {
                     size="large"
                     style={{ borderRadius: 'var(--radius-md)', fontWeight: 600, backgroundColor: '#06c755', borderColor: '#06c755' }}
                   >
-                    ส่งข้อความทดสอบ LINE
+                    ส่งข้อความ LINE
                   </Button>
                 </Form.Item>
               </Form>
