@@ -62,9 +62,10 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
       trend: null,
       trendUp: null,
       icon: <BankOutlined />,
-      iconBg: '#e8f0fe',
-      iconColor: 'var(--color-primary)',
-      accentColor: 'var(--color-primary)',
+      iconBg: '#f8fafc',
+      iconColor: '#64748b',
+      accentColor: '#cbd5e1',
+      bgOverride: '#f8fafc',
     },
     {
       key: 'interest',
@@ -76,8 +77,9 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
       trendUp: null,
       icon: <RiseOutlined />,
       iconBg: '#ecfdf5',
-      iconColor: 'var(--color-success)',
-      accentColor: 'var(--color-success)',
+      iconColor: '#10b981',
+      accentColor: '#a7f3d0',
+      bgOverride: '#ecfdf5',
     },
     {
       key: 'upcoming',
@@ -89,8 +91,9 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
       trendUp: null,
       icon: <ClockCircleOutlined />,
       iconBg: '#fffbeb',
-      iconColor: 'var(--color-warning)',
-      accentColor: 'var(--color-warning)',
+      iconColor: '#f59e0b',
+      accentColor: '#fde68a',
+      bgOverride: '#fffbeb',
     },
     {
       key: 'npl',
@@ -102,8 +105,9 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
       trendUp: null,
       icon: <WarningOutlined />,
       iconBg: '#fef2f2',
-      iconColor: 'var(--color-danger)',
-      accentColor: 'var(--color-danger)',
+      iconColor: '#ef4444',
+      accentColor: '#fecaca',
+      bgOverride: '#fef2f2',
     },
   ];
 
@@ -144,7 +148,13 @@ export default function KPICards({ data, loading = false, onCardClick }: KPICard
         <Tooltip key={card.key} title={card.fullValue} placement="top">
           <div 
             className="kpi-card" 
-            style={{ cursor: onCardClick ? 'pointer' : 'default' }}
+            style={{ 
+              cursor: onCardClick ? 'pointer' : 'default',
+              backgroundColor: card.bgOverride || '#fff',
+              border: `1px solid ${card.accentColor}`,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+              borderRadius: '12px'
+            }}
             onClick={() => {
               if (onCardClick) {
                 // If clicking upcoming, filter to 'upcoming'

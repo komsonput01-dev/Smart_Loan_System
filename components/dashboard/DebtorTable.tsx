@@ -679,7 +679,7 @@ export default function DebtorTable({
 
 
       {/* Desktop Table */}
-      <div className="table-card hidden-mobile">
+      <div className="table-card hidden-mobile" style={{ background: '#fff', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', overflow: 'hidden', border: '1px solid #f0f0f0', marginTop: '16px' }}>
         <Table<Debtor>
           columns={columns}
           dataSource={filtered}
@@ -695,7 +695,7 @@ export default function DebtorTable({
               `${range[0]}-${range[1]} จาก ${total} รายการ`,
             pageSizeOptions: ['10', '20', '50'],
           }}
-          style={{ borderRadius: 0 }}
+          style={{ borderRadius: 0, padding: '8px' }}
           rowClassName={(record) =>
             record.status === 'overdue' ? 'overdue-row' : ''
           }

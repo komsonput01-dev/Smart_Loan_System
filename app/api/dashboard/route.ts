@@ -121,7 +121,32 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json({ kpi, debtors: enriched });
+    const charts = {
+      loanStatus: [
+        { name: 'ปกติ', value: Number(kpi.activeCount), color: '#10b981' },
+        { name: 'ใกล้กำหนด', value: Number(kpi.upcomingCount), color: '#f59e0b' },
+        { name: 'เกินกำหนด', value: Number(kpi.overdueCount), color: '#f97316' },
+        { name: 'หนี้เสีย', value: Number(kpi.nplCount), color: '#ef4444' }
+      ].filter(item => item.value > 0), // Hide zero values in donut
+      debtAging: [
+        { range: '1-30 วัน', amount: 0 },
+        { range: '31-60 วัน', amount: 0 },
+        { range: '61-90 วัน', amount: 0 },
+        { range: '> 90 วัน', amount: 0 }
+      ]
+    };
+
+    enriched.forEach(row => {
+      if (row.overdueDays > 0 && row.status !== 'closed' && row.status !== 'draft') {
+        const p = Number(row.outstanding);
+        if (row.overdueDays <= 30) charts.debtAging[0].amount += p;
+        else if (row.overdueDays <= 60) charts.debtAging[1].amount += p;
+        else if (row.overdueDays <= 90) charts.debtAging[2].amount += p;
+        else charts.debtAging[3].amount += p;
+      }
+    });
+
+    return NextResponse.json({ kpi, debtors: enriched, charts });
   } catch (error) {
     console.error('[GET /api/dashboard]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

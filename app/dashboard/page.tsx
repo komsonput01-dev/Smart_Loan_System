@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import KPICards, { type KPIData } from '@/components/dashboard/KPICards';
+import DashboardCharts, { type ChartsData } from '@/components/dashboard/Charts';
 import DebtorTable from '@/components/dashboard/DebtorTable';
 import type { Debtor } from '@/components/dashboard/DebtorCard';
 import { message, Spin } from 'antd';
@@ -17,6 +18,7 @@ export default function DashboardPage() {
   const [messageApi, contextHolder] = message.useMessage();
 
   const [kpi, setKpi] = useState<KPIData | undefined>(undefined);
+  const [chartsData, setChartsData] = useState<ChartsData | undefined>(undefined);
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +64,11 @@ export default function DashboardPage() {
       // Map debtor rows
       const mapped: Debtor[] = (data.debtors ?? []).map(mapToDebtor);
       setDebtors(mapped);
+      
+      // Map charts
+      if (data.charts) {
+        setChartsData(data.charts);
+      }
     } catch (err: unknown) {
       messageApi.error(err instanceof Error ? err.message : 'เกิดข้อผิดพลาด');
     } finally {
@@ -146,6 +153,9 @@ export default function DashboardPage() {
 
       {/* KPI Summary Cards — real data */}
       <KPICards data={kpi} loading={loading} onCardClick={handleCardClick} />
+
+      {/* Middle Row — Charts (Admin only) */}
+      {isAdmin && <DashboardCharts data={chartsData} />}
 
       {/* Traffic Light Debtor Table — real data */}
       {loading && debtors.length === 0 ? (
