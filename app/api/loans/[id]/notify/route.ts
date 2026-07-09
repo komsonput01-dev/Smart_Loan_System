@@ -89,9 +89,9 @@ export async function POST(req: Request, { params }: RouteParams) {
     const envBankNum = process.env.BANK_ACCOUNT_NUMBER === 'xxx-x-xxxxx-x' ? undefined : process.env.BANK_ACCOUNT_NUMBER;
     const envBankName = process.env.BANK_ACCOUNT_NAME === 'ชื่อเจ้าของบัญชี' ? undefined : process.env.BANK_ACCOUNT_NAME;
     
-    const bankName = loan.bankName ?? settingsMap['BANK_NAME'] ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
-    const bankAccountNum = loan.bankAccountNumber ?? settingsMap['BANK_ACCOUNT_NUMBER'] ?? envBankNum ?? '095-2-98765-4';
-    const bankAccountName = loan.bankAccountName ?? settingsMap['BANK_ACCOUNT_NAME'] ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
+    const bankName = settingsMap['BANK_NAME'] ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
+    const bankAccountNum = settingsMap['BANK_ACCOUNT_NUMBER'] ?? envBankNum ?? '095-2-98765-4';
+    const bankAccountName = settingsMap['BANK_ACCOUNT_NAME'] ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
 
     const loanRef = loan.note?.replace('รหัสสัญญา: ', '') ?? loan.id.substring(0, 8);
     const isOverdue = loan.status === 'overdue' || loan.status === 'npl';
