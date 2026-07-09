@@ -44,7 +44,7 @@ export default function AppHeader({
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
       signOut(() => router.push('/'));
-    } else if (key === 'profile' || key === 'settings') {
+    } else if (key === 'profile') {
       openUserProfile();
     }
   };
@@ -53,12 +53,7 @@ export default function AppHeader({
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: 'โปรไฟล์ผู้ใช้',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: 'ตั้งค่าบัญชี',
+      label: 'จัดการบัญชีผู้ใช้',
     },
     { type: 'divider' },
     {
