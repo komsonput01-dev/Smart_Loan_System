@@ -186,9 +186,6 @@ const SAMPLE_DEBTORS = [
       status: 'closed' as const,
       totalInterestCollected: '24000.00',
       accruedInterest: '0.00',
-      bankName: 'กรุงเทพ',
-      bankAccountName: 'รัตนา สิงห์ทอง',
-      bankAccountNumber: '234-5-67890-1',
     },
   },
 ];
