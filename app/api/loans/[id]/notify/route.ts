@@ -6,7 +6,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { loans, users, lineNotifications, notificationLogs } from '@/lib/db/schema';
+import { loans, users, lineNotifications, notificationLogs, settings } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { ensureUser } from '@/lib/db/ensureUser';
 import { sendLinePushMessage } from '@/lib/line-notify';
@@ -79,11 +79,19 @@ export async function POST(req: Request, { params }: RouteParams) {
     const fmt = (val: Decimal) =>
       `฿${val.toNumber().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+    // Fetch system settings for bank defaults
+    const systemSettings = await db.select().from(settings);
+    const settingsMap = systemSettings.reduce((acc, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
     const envBankNum = process.env.BANK_ACCOUNT_NUMBER === 'xxx-x-xxxxx-x' ? undefined : process.env.BANK_ACCOUNT_NUMBER;
     const envBankName = process.env.BANK_ACCOUNT_NAME === 'ชื่อเจ้าของบัญชี' ? undefined : process.env.BANK_ACCOUNT_NAME;
-    const bankName = loan.bankName ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
-    const bankAccountNum = loan.bankAccountNumber ?? envBankNum ?? '095-2-98765-4';
-    const bankAccountName = loan.bankAccountName ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
+    
+    const bankName = loan.bankName ?? settingsMap['BANK_NAME'] ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
+    const bankAccountNum = loan.bankAccountNumber ?? settingsMap['BANK_ACCOUNT_NUMBER'] ?? envBankNum ?? '095-2-98765-4';
+    const bankAccountName = loan.bankAccountName ?? settingsMap['BANK_ACCOUNT_NAME'] ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
 
     const loanRef = loan.note?.replace('รหัสสัญญา: ', '') ?? loan.id.substring(0, 8);
     const isOverdue = loan.status === 'overdue' || loan.status === 'npl';

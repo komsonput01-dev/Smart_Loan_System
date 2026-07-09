@@ -247,7 +247,20 @@ export const lineNotifications = pgTable(
   (t) => [
     index('line_notifications_status_idx').on(t.status),
     index('line_notifications_loan_id_idx').on(t.loanId),
-  ]
+  ],
+);
+
+/**
+ * settings — การตั้งค่าระบบแบบ Global
+ * เก็บเป็น key-value pair เพื่อความยืดหยุ่นในการเพิ่มค่าต่างๆ ในอนาคต
+ */
+export const settings = pgTable(
+  'settings',
+  {
+    key: text('key').primaryKey(),
+    value: text('value').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(sql`now()`),
+  }
 );
 
 // ─── Relations ────────────────────────────────────────────────────────────────
@@ -303,6 +316,7 @@ export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;
 export type NotificationLog = typeof notificationLogs.$inferSelect;
 export type LineNotification = typeof lineNotifications.$inferSelect;
+export type Setting = typeof settings.$inferSelect;
 export type NewLineNotification = typeof lineNotifications.$inferInsert;
 
 // Useful joined types

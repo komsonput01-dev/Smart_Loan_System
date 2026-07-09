@@ -87,20 +87,42 @@ export default function SettingsPage() {
     fetchDebtors();
   }, []);
 
-  // Mock settings for bank (system default)
+  // Fetch settings from DB
   useEffect(() => {
-    bankForm.setFieldsValue({
-      defaultBankName: 'กสิกรไทย',
-      defaultAccountName: 'บจก. สมาร์ท โลน แมนเนจเม้นท์',
-      defaultAccountNumber: '095-2-98765-4',
-    });
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const data = await res.json();
+          bankForm.setFieldsValue({
+            defaultBankName: data.BANK_NAME || 'กสิกรไทย',
+            defaultAccountName: data.BANK_ACCOUNT_NAME || 'บจก. สมาร์ท โลน แมนเนจเม้นท์',
+            defaultAccountNumber: data.BANK_ACCOUNT_NUMBER || '095-2-98765-4',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings', error);
+      }
+    };
+    fetchSettings();
   }, [bankForm]);
 
   const handleSaveBank = async (values: any) => {
     setSavingBank(true);
     try {
-      // Simulate save
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const payload = {
+        BANK_NAME: values.defaultBankName,
+        BANK_ACCOUNT_NAME: values.defaultAccountName,
+        BANK_ACCOUNT_NUMBER: values.defaultAccountNumber,
+      };
+      
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      
+      if (!res.ok) throw new Error('Failed to save');
       messageApi.success('บันทึกการตั้งค่าบัญชีรับเงินสำเร็จ');
     } catch {
       messageApi.error('เกิดข้อผิดพลาดในการบันทึกข้อมูล');

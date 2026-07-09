@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { loans, users, lineNotifications, notificationLogs } from '@/lib/db/schema';
+import { loans, users, lineNotifications, notificationLogs, settings } from '@/lib/db/schema';
 import { eq, and, lte, lt, sql, notInArray } from 'drizzle-orm';
 import dayjs from 'dayjs';
 import Decimal from 'decimal.js';
@@ -38,6 +38,13 @@ export async function GET(req: Request) {
     const t1DateStr = dayjs().add(1, 'day').format('YYYY-MM-DD');
 
     console.log(`[Cron Notifications] Starting cron execution for ${todayStr}`);
+
+    // Fetch system settings for bank defaults
+    const systemSettings = await db.select().from(settings);
+    const settingsMap = systemSettings.reduce((acc, curr) => {
+      acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
 
     // ── 2. Enqueue Phase: T-3 (Upcoming in 3 Days) ───────────────────────────
     const t3Loans = await db
@@ -157,9 +164,9 @@ export async function GET(req: Request) {
       // Bank account defaults if not set on the contract
       const envBankNum = process.env.BANK_ACCOUNT_NUMBER === 'xxx-x-xxxxx-x' ? undefined : process.env.BANK_ACCOUNT_NUMBER;
       const envBankName = process.env.BANK_ACCOUNT_NAME === 'ชื่อเจ้าของบัญชี' ? undefined : process.env.BANK_ACCOUNT_NAME;
-      const bankName = loan.bankName ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
-      const bankAccountNum = loan.bankAccountNumber ?? envBankNum ?? '095-2-98765-4';
-      const bankAccountName = loan.bankAccountName ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
+      const bankName = loan.bankName ?? settingsMap['BANK_NAME'] ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
+      const bankAccountNum = loan.bankAccountNumber ?? settingsMap['BANK_ACCOUNT_NUMBER'] ?? envBankNum ?? '095-2-98765-4';
+      const bankAccountName = loan.bankAccountName ?? settingsMap['BANK_ACCOUNT_NAME'] ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
 
       const messageText = [
         `สวัสดีคุณ ${loan.userName},`,
