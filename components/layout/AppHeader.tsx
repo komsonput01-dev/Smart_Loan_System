@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Layout, Avatar, Badge, Button, Dropdown, Tooltip, Typography } from 'antd';
+import { Layout, Avatar, Badge, Button, Dropdown, Tooltip, Typography, Popover } from 'antd';
 import type { MenuProps } from 'antd';
 import {
   MenuOutlined,
@@ -161,23 +161,36 @@ export default function AppHeader({
         </Tooltip>
 
         {/* Notifications */}
-        <Tooltip title="การแจ้งเตือน">
-          <Badge count={3} size="small">
-            <Button
-              type="text"
-              icon={<BellOutlined />}
-              style={{
-                width: 36,
-                height: 36,
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--color-text-secondary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            />
-          </Badge>
-        </Tooltip>
+        <Popover
+          content={
+            <div style={{ maxWidth: 280, padding: '4px' }}>
+              <div style={{ fontWeight: 600, marginBottom: 8, fontSize: 14 }}>การแจ้งเตือนระบบ</div>
+              <div style={{ fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                📍 ฟีเจอร์นี้กำลังอยู่ระหว่างการพัฒนา ในอนาคตจะแสดงรายการแจ้งเตือน เช่น สัญญาที่ใกล้ครบกำหนด หรือลูกหนี้ค้างชำระ (Overdue) ตรงนี้ครับ
+              </div>
+            </div>
+          }
+          trigger="click"
+          placement="bottomRight"
+        >
+          <Tooltip title="การแจ้งเตือน">
+            <Badge dot color="var(--color-primary)">
+              <Button
+                type="text"
+                icon={<BellOutlined />}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--color-text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              />
+            </Badge>
+          </Tooltip>
+        </Popover>
 
         {/* Divider */}
         <div
