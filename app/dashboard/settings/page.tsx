@@ -361,14 +361,15 @@ export default function SettingsPage() {
               style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}
             >
               <Paragraph>
-                โปรเจกต์นี้ได้รับการควบคุมสิทธิ์ผ่าน <strong>Clerk User management</strong> โดยผู้กู้และผู้ปล่อยกู้ (แอดมิน) จะได้รับสิทธิ์ใช้งานที่ต่างกันโดยสิ้นเชิง:
+                โปรเจกต์นี้ได้รับการควบคุมสิทธิ์ผ่าน <strong>Clerk User management</strong> โดยแบ่งสิทธิ์ผู้ใช้งานออกเป็น 3 ระดับ เพื่อความปลอดภัยและเหมาะสมกับการใช้งาน:
               </Paragraph>
 
               <Alert
-                message="เงื่อนไขสิทธิ์แอดมินในระบบ"
+                message="ระดับสิทธิ์ผู้ใช้งานในระบบ (Roles)"
                 description={
                   <ul style={{ paddingLeft: 16, margin: '8px 0 0 0', fontSize: 13 }}>
-                    <li>สิทธิ์ <strong>Admin</strong> สามารถสร้างสัญญา ปรับแก้ยอด บันทึกชำระเงิน และอัปโหลดไฟล์ได้</li>
+                    <li>สิทธิ์ <strong>Admin</strong> (ผู้ดูแลระบบ) สามารถเข้าถึงทุกส่วน ลบข้อมูลผู้ใช้/สัญญา และปรับตั้งค่าระบบได้</li>
+                    <li>สิทธิ์ <strong>Staff</strong> (พนักงาน) สามารถสร้างสัญญา ปรับแก้ยอด บันทึกชำระเงิน และดูข้อมูลได้ทั้งหมด (แต่ลบข้อมูลหรือตั้งค่าระบบไม่ได้)</li>
                     <li>สิทธิ์ <strong>Debtor</strong> (ลูกหนี้) จะดูภาพรวมสัญญาของตนเองและประวัติชำระได้เท่านั้น</li>
                     <li>ระบบมีการป้องกัน SQL Injection (ผ่าน Drizzle ORM) และ CORS/XSS security headers เรียบร้อยแล้ว</li>
                   </ul>
