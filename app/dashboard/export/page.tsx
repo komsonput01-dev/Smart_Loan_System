@@ -49,7 +49,7 @@ export default function ExportPage() {
         throw new Error('ไม่สามารถดึงข้อมูลรายงานได้');
       }
       const result = await res.json();
-      const { summary, rawRows } = result;
+      const { summary, rawRows, paymentRows } = result;
 
       // 1. Create Summary Sheet Data
       const summaryRows = [
@@ -90,10 +90,30 @@ export default function ExportPage() {
         wch: Math.min(50, Math.max(12, maxColWidths[key])),
       }));
 
+      // 2.5 Create Payments Sheet
+      let wsPayments = null;
+      if (paymentRows && paymentRows.length > 0) {
+        wsPayments = XLSX.utils.json_to_sheet(paymentRows);
+        const maxColWidthsPayments = paymentRows.reduce((acc: Record<string, number>, row: any) => {
+          Object.keys(row).forEach((key) => {
+            const val = String(row[key] ?? '');
+            const len = val.length > 0 ? val.length * 1.5 : 10;
+            acc[key] = Math.max(acc[key] || 10, len, key.length * 1.8);
+          });
+          return acc;
+        }, {});
+        wsPayments['!cols'] = Object.keys(maxColWidthsPayments).map((key) => ({
+          wch: Math.min(50, Math.max(12, maxColWidthsPayments[key])),
+        }));
+      }
+
       // 3. Create Workbook and Append Sheets
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
       XLSX.utils.book_append_sheet(wb, wsRaw, 'Raw_Data');
+      if (wsPayments) {
+        XLSX.utils.book_append_sheet(wb, wsPayments, 'Payments');
+      }
 
       // 4. Save file
       XLSX.writeFile(wb, `SmartLoan_Report_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`);
@@ -115,7 +135,12 @@ export default function ExportPage() {
     {
       icon: <TableOutlined style={{ fontSize: 24, color: 'var(--color-success)' }} />,
       title: 'แผ่นงาน Raw Data',
-      description: 'ข้อมูลรายสัญญาเงินกู้แบบละเอียด ประกอบด้วยข้อมูลผู้กู้ ยอดค้างชำระ ยอดชำระคืนรวม อัตราดอกเบี้ย สถานะสัญญา วันครบกำหนด และประวัติการโอนเงิน เหมาะสำหรับการทำ Pivot Table หรือสร้าง Dashboard ใน Excel',
+      description: 'ข้อมูลรายสัญญาเงินกู้แบบละเอียด ประกอบด้วยข้อมูลผู้กู้ ยอดค้างชำระ ยอดชำระคืนรวม อัตราดอกเบี้ย สถานะสัญญา วันครบกำหนด เหมาะสำหรับการทำ Pivot Table หรือสร้าง Dashboard ใน Excel',
+    },
+    {
+      icon: <CheckCircleOutlined style={{ fontSize: 24, color: 'var(--color-warning)' }} />,
+      title: 'แผ่นงาน Payments',
+      description: 'ข้อมูลประวัติการรับชำระเงินทั้งหมดแบบละเอียด ประกอบด้วยวันที่ชำระ ยอดเงินที่รับชำระ การตัดเงินต้น ดอกเบี้ย และเบี้ยปรับ เพื่อใช้ในการตรวจสอบกระแสเงินสด',
     },
   ];
 
@@ -140,7 +165,7 @@ export default function ExportPage() {
             style={{ borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)' }}
           >
             <Paragraph>
-              คุณสามารถส่งออกข้อมูลทั้งหมดในระบบออกมาเป็นไฟล์สเปรดชีต Excel (.xlsx) เพื่อนำไปวิเคราะห์ผลต่อ ทำบัญชี หรือพิมพ์เป็นเอกสารออฟไลน์ได้โดยตรง ไฟล์รายงานจะประกอบด้วยแผ่นงานย่อย 2 แผ่น:
+              คุณสามารถส่งออกข้อมูลทั้งหมดในระบบออกมาเป็นไฟล์สเปรดชีต Excel (.xlsx) เพื่อนำไปวิเคราะห์ผลต่อ ทำบัญชี หรือพิมพ์เป็นเอกสารออฟไลน์ได้โดยตรง ไฟล์รายงานจะประกอบด้วยแผ่นงานย่อย 3 แผ่น:
             </Paragraph>
 
             <List
