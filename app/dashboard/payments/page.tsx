@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, useRef } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import {
   Table,
@@ -110,14 +110,17 @@ function PaymentsContent() {
     fetchPayments();
   }, [fetchPayments]);
 
+  const hasAutoOpened = useRef(false);
+
   useEffect(() => {
     // Auto open drawer if action=new in URL (and user is admin/staff)
-    if (searchParams.get('action') === 'new' && !drawerOpen) {
+    if (searchParams.get('action') === 'new' && !hasAutoOpened.current) {
+      hasAutoOpened.current = true;
       if (!isDebtor) {
         setDrawerOpen(true);
       }
     }
-  }, [searchParams, isDebtor, drawerOpen]);
+  }, [searchParams, isDebtor]);
 
   useEffect(() => {
     if (drawerOpen) {
