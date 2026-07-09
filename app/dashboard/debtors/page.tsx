@@ -38,6 +38,8 @@ import {
 } from '@ant-design/icons';
 import { useUser } from '@clerk/nextjs';
 
+import { useRouter } from 'next/navigation';
+
 const { Text } = Typography;
 
 interface DebtorRow {
@@ -91,6 +93,7 @@ const avatarColors = [
 ];
 
 export default function DebtorsPage() {
+  const router = useRouter();
   const { user: clerkUser } = useUser();
   const isAdmin = clerkUser?.publicMetadata?.role !== 'debtor';
   const isSuperAdmin = clerkUser?.publicMetadata?.role === 'admin' || !clerkUser?.publicMetadata?.role;
@@ -356,7 +359,7 @@ export default function DebtorsPage() {
               icon={<EyeOutlined />}
               size="small"
               style={{ color: 'var(--color-primary)' }}
-              onClick={() => messageApi.info(`ดูรายละเอียดลูกหนี้: ${r.fullName}`)}
+              onClick={() => router.push(`/dashboard/loans?search=${encodeURIComponent(r.fullName || '')}`)}
             />
           </Tooltip>
           {isAdmin ? (

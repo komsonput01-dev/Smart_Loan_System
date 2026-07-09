@@ -133,6 +133,14 @@ export default function LoansPage() {
   }, [fetchLoans]);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('search');
+      if (q) setSearch(q);
+    }
+  }, []);
+
+  useEffect(() => {
     if (drawerOpen) {
       fetchDebtors();
     }
