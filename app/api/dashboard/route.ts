@@ -94,8 +94,15 @@ export async function GET() {
     const debtors = await debtorsQuery.orderBy(desc(loans.createdAt));
 
     // ── 3. Compute overdue days and real-time interest client-side friendly ─────────
-    const { calculateCurrentAccruedInterest } = await import('@/lib/interest-calculator');
+    const { calculateCurrentAccruedInterest, calculateComputedLoanStatus } = await import('@/lib/interest-calculator');
     const today = new Date();
+
+    let activeCount = 0;
+    let upcomingCount = 0;
+    let overdueCount = 0;
+    let nplCount = 0;
+    let closedCount = 0;
+    let draftCount = 0;
 
     const enriched = debtors.map((row) => {
       const due = new Date(row.dueDate);
@@ -113,20 +120,47 @@ export async function GET() {
         dueDate: row.dueDate,
       });
 
+      const computedStatus = calculateComputedLoanStatus({
+        status: row.status,
+        dueDate: row.dueDate,
+        outstandingPrincipal: row.outstanding,
+      });
+
+      if (computedStatus === 'active') activeCount++;
+      else if (computedStatus === 'upcoming') upcomingCount++;
+      else if (computedStatus === 'overdue') overdueCount++;
+      else if (computedStatus === 'npl') nplCount++;
+      else if (computedStatus === 'closed') closedCount++;
+      else if (computedStatus === 'draft') draftCount++;
+
       return { 
         ...row, 
+        status: computedStatus,
         overdueDays,
         currentNormalAccrued: currentInterest.normalAccrued.toNumber(),
         currentPenaltyAccrued: currentInterest.penaltyAccrued.toNumber(),
       };
     });
 
+    const dynamicKpi = {
+      totalPrincipal: kpi.totalPrincipal,
+      totalOutstanding: kpi.totalOutstanding,
+      totalInterestCollected: kpi.totalInterestCollected,
+      totalLoans: kpi.totalLoans,
+      activeCount,
+      upcomingCount,
+      overdueCount,
+      nplCount,
+      closedCount,
+      draftCount,
+    };
+
     const charts = {
       loanStatus: [
-        { name: 'ปกติ', value: Number(kpi.activeCount), color: '#10b981' },
-        { name: 'ใกล้กำหนด', value: Number(kpi.upcomingCount), color: '#f59e0b' },
-        { name: 'เกินกำหนด', value: Number(kpi.overdueCount), color: '#f97316' },
-        { name: 'หนี้เสีย', value: Number(kpi.nplCount), color: '#ef4444' }
+        { name: 'ปกติ', value: activeCount, color: '#10b981' },
+        { name: 'ใกล้กำหนด', value: upcomingCount, color: '#f59e0b' },
+        { name: 'เกินกำหนด', value: overdueCount, color: '#f97316' },
+        { name: 'หนี้เสีย', value: nplCount, color: '#ef4444' }
       ].filter(item => item.value > 0), // Hide zero values in donut
       debtAging: [
         { range: '1-30 วัน', amount: 0 },
@@ -146,7 +180,7 @@ export async function GET() {
       }
     });
 
-    return NextResponse.json({ kpi, debtors: enriched, charts });
+    return NextResponse.json({ kpi: dynamicKpi, debtors: enriched, charts });
   } catch (error) {
     console.error('[GET /api/dashboard]', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

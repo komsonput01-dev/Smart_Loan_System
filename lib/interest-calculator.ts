@@ -204,3 +204,34 @@ export function calculateCurrentAccruedInterest(params: {
     totalAccrued,
   };
 }
+
+/**
+ * คำนวณสถานะสัญญาเงินกู้แบบ Dynamic ตามวันที่ปัจจุบันและข้อมูลการเงิน
+ */
+export function calculateComputedLoanStatus(params: {
+  status: string;
+  dueDate: string;
+  outstandingPrincipal: string;
+}): 'draft' | 'active' | 'upcoming' | 'overdue' | 'closed' | 'npl' {
+  if (params.status === 'draft') return 'draft';
+  if (params.status === 'closed' || new Decimal(params.outstandingPrincipal).isZero()) return 'closed';
+  if (params.status === 'npl') return 'npl';
+
+  const todayStr = dayjs().add(7, 'hour').format('YYYY-MM-DD');
+  const today = new Date(todayStr);
+  const due = new Date(params.dueDate);
+
+  const diffMs = due.getTime() - today.getTime();
+  const daysUntilDue = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  if (daysUntilDue < 0) {
+    const overdueDays = Math.abs(daysUntilDue);
+    if (overdueDays > 90) {
+      return 'npl';
+    }
+    return 'overdue';
+  } else if (daysUntilDue <= 3) {
+    return 'upcoming';
+  }
+  return 'active';
+}

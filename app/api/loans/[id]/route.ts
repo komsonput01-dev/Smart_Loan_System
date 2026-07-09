@@ -9,6 +9,7 @@ import { db } from '@/lib/db';
 import { loans, users, payments, documents } from '@/lib/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { ensureUser } from '@/lib/db/ensureUser';
+import { calculateComputedLoanStatus } from '@/lib/interest-calculator';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -86,9 +87,16 @@ export async function GET(req: Request, { params }: RouteParams) {
       .from(documents)
       .where(eq(documents.loanId, id));
 
+    const computedStatus = calculateComputedLoanStatus({
+      status: loanDetail.status,
+      dueDate: loanDetail.dueDate,
+      outstandingPrincipal: loanDetail.outstandingPrincipal,
+    });
+
     return NextResponse.json({
       loan: {
         ...loanDetail,
+        status: computedStatus,
         creatorName,
         approverName,
       },

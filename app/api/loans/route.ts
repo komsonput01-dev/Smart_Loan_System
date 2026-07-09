@@ -16,6 +16,7 @@ import { loans, users } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ensureUser } from '@/lib/db/ensureUser';
+import { calculateComputedLoanStatus } from '@/lib/interest-calculator';
 
 // ─── Validation Schemas ───────────────────────────────────────────────────────
 
@@ -112,8 +113,21 @@ export async function GET(req: Request) {
 
     const kpiData = await kpiQuery;
 
+    // Map dynamic status
+    const enrichedLoans = loansData.map(loan => {
+      const computedStatus = calculateComputedLoanStatus({
+        status: loan.status,
+        dueDate: loan.dueDate,
+        outstandingPrincipal: loan.outstandingPrincipal,
+      });
+      return {
+        ...loan,
+        status: computedStatus,
+      };
+    });
+
     return NextResponse.json({
-      loans: loansData,
+      loans: enrichedLoans,
       kpi: kpiData[0],
       pagination: {
         page,
