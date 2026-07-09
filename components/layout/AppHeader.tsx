@@ -31,7 +31,7 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const router = useRouter();
   const { user } = useUser();
-  const { signOut } = useClerk();
+  const { signOut, openUserProfile } = useClerk();
 
   const now = new Date();
   const dateStr = now.toLocaleDateString('th-TH', {
@@ -44,6 +44,8 @@ export default function AppHeader({
   const handleMenuClick: MenuProps['onClick'] = ({ key }) => {
     if (key === 'logout') {
       signOut(() => router.push('/'));
+    } else if (key === 'profile' || key === 'settings') {
+      openUserProfile();
     }
   };
 
