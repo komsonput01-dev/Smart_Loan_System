@@ -155,9 +155,11 @@ export async function GET(req: Request) {
       const totalPayoff = new Decimal(loan.outstandingPrincipal).plus(currentAccrued);
 
       // Bank account defaults if not set on the contract
+      const envBankNum = process.env.BANK_ACCOUNT_NUMBER === 'xxx-x-xxxxx-x' ? undefined : process.env.BANK_ACCOUNT_NUMBER;
+      const envBankName = process.env.BANK_ACCOUNT_NAME === 'ชื่อเจ้าของบัญชี' ? undefined : process.env.BANK_ACCOUNT_NAME;
       const bankName = loan.bankName ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
-      const bankAccountNum = loan.bankAccountNumber ?? process.env.BANK_ACCOUNT_NUMBER ?? 'xxx-x-xxxxx-x';
-      const bankAccountName = loan.bankAccountName ?? process.env.BANK_ACCOUNT_NAME ?? 'บริษัท สมาร์ทโลน จำกัด';
+      const bankAccountNum = loan.bankAccountNumber ?? envBankNum ?? '095-2-98765-4';
+      const bankAccountName = loan.bankAccountName ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
 
       const messageText = [
         `สวัสดีคุณ ${loan.userName},`,

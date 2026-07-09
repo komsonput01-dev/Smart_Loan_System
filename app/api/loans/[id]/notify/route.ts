@@ -79,9 +79,11 @@ export async function POST(req: Request, { params }: RouteParams) {
     const fmt = (val: Decimal) =>
       `฿${val.toNumber().toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
+    const envBankNum = process.env.BANK_ACCOUNT_NUMBER === 'xxx-x-xxxxx-x' ? undefined : process.env.BANK_ACCOUNT_NUMBER;
+    const envBankName = process.env.BANK_ACCOUNT_NAME === 'ชื่อเจ้าของบัญชี' ? undefined : process.env.BANK_ACCOUNT_NAME;
     const bankName = loan.bankName ?? process.env.BANK_NAME ?? 'ธนาคารกสิกรไทย';
-    const bankAccountNum = loan.bankAccountNumber ?? process.env.BANK_ACCOUNT_NUMBER ?? 'xxx-x-xxxxx-x';
-    const bankAccountName = loan.bankAccountName ?? process.env.BANK_ACCOUNT_NAME ?? 'บริษัท สมาร์ทโลน จำกัด';
+    const bankAccountNum = loan.bankAccountNumber ?? envBankNum ?? '095-2-98765-4';
+    const bankAccountName = loan.bankAccountName ?? envBankName ?? 'บจก. สมาร์ท โลน แมนเนจเม้นท์';
 
     const loanRef = loan.note?.replace('รหัสสัญญา: ', '') ?? loan.id.substring(0, 8);
     const isOverdue = loan.status === 'overdue' || loan.status === 'npl';
